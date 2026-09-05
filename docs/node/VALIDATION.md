@@ -15,9 +15,9 @@
 修正扫描范围、将临时Go工具链移出仓库，并以 `go test -p 2 ./...` 重新运行后，全部包通过。
 `go test -race -tags mastercontract ./internal/node ./cmd/3x-ui-node ./tools/nodebench ./internal/web/network` 通过。
 
-## 正在运行的24小时测试
+## 已取消的24小时测试
 
-2026-09-06 02:26（Asia/Shanghai）启动本地隔离负载测试，尚未完成。
+2026-09-06 02:26（Asia/Shanghai）启动本地隔离负载测试，后按用户要求提前停止并删除测试容器，不能作为24小时验收结果。
 目录 `.cache/node-lab.6dspOI`；服务 `node-service-6dspOI`、负载端 `node-driver-6dspOI`。
 `resources.txt` 每30秒采集；结束后生成 `load.jsonl`、`driver.log`、`service-state.json`。
 已创建仅在异常或完成时通知的跟进；休眠、Docker停止或明显采样间断不能算连续24小时通过。
@@ -26,7 +26,7 @@
 ## 已验证
 
 - macOS arm64 / Go1.27.1：10 项状态、计数、配额、清零、损坏状态、API 与输入限制测试通过。
-- Xray26.7.28：真实 REALITY/Vision 请求、持续请求中的其他账号热增删、PID不变、无效结构回退后再次请求成功。
+- Xray26.7.28：真实普通 VLESS/TCP 与 REALITY/Vision 请求；REALITY 测试还覆盖持续请求中的其他账号热增删、PID不变、无效结构回退后再次请求成功。
 - 上述真实连接测试启用 Go race detector，通过。
 - 节点生产依赖图不包含 Xray服务注册、完整面板、Gin、GORM、gVisor或Amnezia。
 - 原主面板 `Remote` 客户端（未修改）对精简节点：HTTPS指纹固定、入站与账号CRUD、排序、快照、清零、跨节点推送、空结果接口及拒绝完整更新，通过。

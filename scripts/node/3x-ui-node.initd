@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 name="3x-ui-node"
-description="Headless VLESS REALITY leaf node"
+description="Headless VLESS TCP leaf node"
 command="/usr/local/lib/3x-ui-node/current/3x-ui-node"
 command_args="serve -config /etc/3x-ui-node/config.json"
 command_background=true

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.0-node"
+	Version     = "0.1.1-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -258,8 +258,11 @@ func ValidateInbound(i *Inbound) error {
 	var network, security string
 	_ = json.Unmarshal(stream["network"], &network)
 	_ = json.Unmarshal(stream["security"], &security)
-	if (network != "tcp" && network != "raw") || security != "reality" {
-		return errors.New("only TCP/RAW + REALITY is supported")
+	if network != "tcp" && network != "raw" {
+		return errors.New("only TCP/RAW transport is supported")
+	}
+	if security != "" && security != "none" && security != "reality" {
+		return errors.New("only none or REALITY security is supported")
 	}
 	for k, v := range stream {
 		if !slices.Contains([]string{"network", "security", "realitySettings", "tcpSettings", "rawSettings", "externalProxy"}, k) && !emptyJSON(v) {
@@ -292,19 +295,23 @@ func ValidateInbound(i *Inbound) error {
 			}
 		}
 	}
-	var reality map[string]json.RawMessage
-	if err := json.Unmarshal(stream["realitySettings"], &reality); err != nil {
-		return errors.New("REALITY settings required")
-	}
-	for name, value := range reality {
-		if !slices.Contains([]string{"target", "dest", "serverNames", "privateKey", "shortIds", "minClientVer", "maxClientVer", "maxTimeDiff", "settings"}, name) && !emptyJSON(value) {
-			return fmt.Errorf("unsupported REALITY setting %s", name)
+	if security == "reality" {
+		var reality map[string]json.RawMessage
+		if err := json.Unmarshal(stream["realitySettings"], &reality); err != nil {
+			return errors.New("REALITY settings required")
 		}
-	}
-	var key string
-	_ = json.Unmarshal(reality["privateKey"], &key)
-	if key == "" {
-		return errors.New("REALITY privateKey required")
+		for name, value := range reality {
+			if !slices.Contains([]string{"target", "dest", "serverNames", "privateKey", "shortIds", "minClientVer", "maxClientVer", "maxTimeDiff", "settings"}, name) && !emptyJSON(value) {
+				return fmt.Errorf("unsupported REALITY setting %s", name)
+			}
+		}
+		var key string
+		_ = json.Unmarshal(reality["privateKey"], &key)
+		if key == "" {
+			return errors.New("REALITY privateKey required")
+		}
+	} else if !emptyJSON(stream["realitySettings"]) {
+		return errors.New("REALITY settings require REALITY security")
 	}
 	var sniff map[string]json.RawMessage
 	if len(i.Sniffing) > 0 {
@@ -323,6 +330,9 @@ func ValidateInbound(i *Inbound) error {
 	for _, c := range cs {
 		if err := validateClient(c); err != nil {
 			return err
+		}
+		if security != "reality" && c.Text("flow") != "" {
+			return errors.New("XTLS Vision flow requires REALITY security")
 		}
 		if seen[c.Text("email")] {
 			return errors.New("duplicate client email in inbound")

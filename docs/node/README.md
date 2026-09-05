@@ -6,7 +6,7 @@
 
 ## 功能范围
 
-仅 VLESS、TCP/RAW、REALITY（可选 Vision）、直连出口。
+仅 VLESS + TCP/RAW，安全层支持无加密（`none`）或 REALITY（可选 Vision），直连出口。
 保留入站/账号 CRUD、分享元数据、流量、配额、固定到期、首次使用计时、清零。
 用户修改走复用的本机 gRPC；监听结构变化串行重启 Xray。
 不支持其他协议、订阅服务、自动续期、IP/设备限制、嗅探、区域规则、通知及完整面板更新。
@@ -20,12 +20,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.0-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.1-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。将匹配架构的包和仓库中的安装脚本传到 VPS：
 
 ```sh
-sh install.sh install ./3x-ui-node-0.1.0-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh install ./3x-ui-node-0.1.1-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node credentials
 3x-ui-node status
 ```
@@ -55,7 +55,7 @@ sh install.sh install ./3x-ui-node-0.1.0-linux-amd64.tar.gz TRUSTED_SHA256
 所有命令支持 `-config /absolute/path/config.json`。
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.0-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.1-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
@@ -85,7 +85,7 @@ sh scripts/node/run-lab.sh 60s
 sh scripts/node/run-lab.sh 24h
 ```
 
-第二项使用真实固定版本 Xray，验证 REALITY/Vision、API 热增删、不重启和失败配置恢复。
+第二项使用真实固定版本 Xray，验证普通 VLESS/TCP、REALITY/Vision、API 热增删、不重启和失败配置恢复。
 测试仅放行自身临时回环 HTTP 目标，不改变生产配置。
 资源结果及未完成项见 [资源与验收记录](VALIDATION.md)。
 

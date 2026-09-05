@@ -329,6 +329,34 @@ func TestRejectUnsupportedConfiguration(t *testing.T) {
 	}
 }
 
+func TestValidatePlainVLESSTCP(t *testing.T) {
+	ib := testInbound()
+	ib.StreamSettings = Object(`{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`)
+	clients, err := ib.Clients()
+	if err != nil {
+		t.Fatal(err)
+	}
+	clients[0].Set("flow", "")
+	ib.SetClients(clients)
+	if err = ValidateInbound(&ib); err != nil {
+		t.Fatalf("plain VLESS TCP rejected: %v", err)
+	}
+
+	withRealityFields := ib
+	withRealityFields.StreamSettings = Object(`{"network":"tcp","security":"none","realitySettings":{"privateKey":"must-not-be-ignored"}}`)
+	if err = ValidateInbound(&withRealityFields); err == nil {
+		t.Fatal("plain VLESS silently accepted REALITY-only settings")
+	}
+
+	withVision := ib
+	clients, _ = withVision.Clients()
+	clients[0].Set("flow", "xtls-rprx-vision")
+	withVision.SetClients(clients)
+	if err = ValidateInbound(&withVision); err == nil {
+		t.Fatal("plain VLESS silently accepted XTLS Vision flow")
+	}
+}
+
 func TestFullMasterRemoteRouteCoverage(t *testing.T) {
 	b, err := os.ReadFile("../web/runtime/remote.go")
 	if err != nil {

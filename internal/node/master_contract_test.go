@@ -86,4 +86,12 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 		t.Fatal("full updater accepted")
 	}
 	must(r.DelInbound(ctx, ib))
+	plain := &model.Inbound{Tag: "n1-in-19090", Port: 19090, Protocol: "vless", Enable: true, Settings: `{"decryption":"none","clients":[]}`, StreamSettings: `{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`, Sniffing: `{"enabled":false}`}
+	must(r.AddInbound(ctx, plain))
+	options, err = r.ListInboundOptions(ctx)
+	must(err)
+	if len(options) != 1 || options[0].Port != plain.Port || options[0].Protocol != plain.Protocol {
+		t.Fatalf("plain VLESS option missing: %+v", options)
+	}
+	must(r.DelInbound(ctx, plain))
 }
