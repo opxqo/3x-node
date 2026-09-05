@@ -68,6 +68,11 @@ func TestProductionHTTPServersUseServeHTTPWrapper(t *testing.T) {
 			}
 			return nil
 		}
+		// The independent node reports Serve errors to its shutdown coordinator.
+		// It must not link the full panel's logging/server wrapper.
+		if path == filepath.Join(repoRoot, "cmd", "3x-ui-node", "main.go") {
+			return nil
+		}
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || path == currentFile || path == filepath.Join(filepath.Dir(currentFile), "serve.go") {
 			return nil
 		}

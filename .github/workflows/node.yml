@@ -1,0 +1,34 @@
+name: Headless node
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['cmd/3x-ui-node/**', 'internal/node/**', 'tools/nodebench/**', 'scripts/node/**', 'go.mod', 'go.sum', '.github/workflows/node.yml']
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go test -race -tags mastercontract ./internal/node ./cmd/3x-ui-node ./tools/nodebench
+      - run: sh scripts/node/build.sh
+      - name: Real Xray integration
+        run: |
+          mkdir -p /tmp/node-package
+          tar -xzf dist/node/3x-ui-node-0.1.0-linux-amd64.tar.gz -C /tmp/node-package
+          NODE_XRAY_TEST_BINARY=/tmp/node-package/xray go test -race -v ./internal/node
+      - name: Constrained service test
+        run: sh scripts/node/run-lab.sh 60s
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: node-packages-and-measurements
+          path: |
+            dist/node/
+            .cache/node-lab.*/resources.txt
+            .cache/node-lab.*/load.jsonl
+            .cache/node-lab.*/driver.log
+            .cache/node-lab.*/service-state.json

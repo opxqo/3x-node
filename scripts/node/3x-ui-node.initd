@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+name="3x-ui-node"
+description="Headless VLESS REALITY leaf node"
+command="/usr/local/lib/3x-ui-node/current/3x-ui-node"
+command_args="serve -config /etc/3x-ui-node/config.json"
+command_background=true
+pidfile="/run/3x-ui-node.pid"
+retry="TERM/30/KILL/5"
+depend() { need net; after firewall; }
+start_pre() {
+    checkpath -d -m 0700 /var/lib/3x-ui-node
+    "$command" check -config /etc/3x-ui-node/config.json || return 1
+    export GOMAXPROCS=1 GOGC=50 GOMEMLIMIT=16MiB
+}
