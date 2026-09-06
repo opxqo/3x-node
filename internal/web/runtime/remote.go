@@ -517,15 +517,13 @@ func (r *Remote) RecordAdoptedInbound(ib *model.Inbound) {
 }
 
 // AdoptInboundAlias records a deployed alias without mutating either panel.
-// The runtime association is rediscovered after a master restart.  An alias
-// proves only that the remote id can be reused; it does not prove the remote
-// inbound has the master's full payload (especially its client UUIDs).  Leave
-// the fingerprint unset so the first reconcile sends that complete payload.
+// The runtime association is rediscovered after a master restart.
 func (r *Remote) AdoptInboundAlias(ib *model.Inbound, remote RemoteInboundOption) {
 	r.mu.Lock()
 	r.remoteIDByTag[remote.Tag] = remote.Id
 	r.remoteIDByTag[ib.Tag] = remote.Id
 	r.adoptedAliases[ib.Tag] = remote.Tag
+	r.pushedFP[ib.Tag] = wireFingerprint(wireInbound(ib, r.node.Id))
 	r.mu.Unlock()
 }
 
