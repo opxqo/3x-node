@@ -329,6 +329,37 @@ func TestRejectUnsupportedConfiguration(t *testing.T) {
 	}
 }
 
+func TestVlessEncryptionDefaults(t *testing.T) {
+	for _, security := range []string{"none", "reality"} {
+		t.Run(security, func(t *testing.T) {
+			for _, value := range []string{`"none"`, `"mlkem768x25519plus.native.example"`, `""`, `null`, `false`, `123`} {
+				ib := testInbound()
+				if security == "none" {
+					ib.StreamSettings = Object(`{"network":"tcp","security":"none"}`)
+				}
+				ib.Settings = Object(`{"clients":[],"decryption":"none","fallbacks":[],"encryption":` + value + `}`)
+				err := ValidateInbound(&ib)
+				if (err == nil) != (value == `"none"`) {
+					t.Fatalf("encryption=%s: %v", value, err)
+				}
+				if err == nil {
+					n, _ := testNode(t)
+					if _, err := n.PutInbound(ib, 1); err != nil {
+						t.Fatal(err)
+					}
+					var saved map[string]json.RawMessage
+					if err := json.Unmarshal(n.Inbounds()[0].Settings, &saved); err != nil {
+						t.Fatal(err)
+					}
+					if string(saved["encryption"]) != value {
+						t.Fatal("encryption metadata lost")
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestValidatePlainVLESSTCP(t *testing.T) {
 	ib := testInbound()
 	ib.StreamSettings = Object(`{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`)

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.1-node"
+	Version     = "0.1.2-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -239,11 +239,17 @@ func ValidateInbound(i *Inbound) error {
 		return err
 	}
 	for k, v := range settings {
-		if !slices.Contains([]string{"clients", "decryption", "fallbacks", "testseed"}, k) && !emptyJSON(v) {
+		if !slices.Contains([]string{"clients", "decryption", "encryption", "fallbacks", "testseed"}, k) && !emptyJSON(v) {
 			return fmt.Errorf("unsupported VLESS setting %s", k)
 		}
 	}
 	var decryption string
+	if raw, ok := settings["encryption"]; ok {
+		var encryption string
+		if err := json.Unmarshal(raw, &encryption); err != nil || encryption != "none" {
+			return errors.New("VLESS encryption must be none or omitted")
+		}
+	}
 	_ = json.Unmarshal(settings["decryption"], &decryption)
 	if decryption != "none" {
 		return errors.New("VLESS decryption must be none")

@@ -47,7 +47,7 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	ib := &model.Inbound{Tag: "n1-in-18443", Port: 18443, Protocol: "vless", Enable: true, Settings: `{"decryption":"none","clients":[]}`, StreamSettings: `{"network":"tcp","security":"reality","realitySettings":{"privateKey":"test","target":"example.org:443","serverNames":["example.org"],"shortIds":["ab"]}}`, Sniffing: `{"enabled":false}`}
+	ib := &model.Inbound{Tag: "n1-in-18443", Port: 18443, Protocol: "vless", Enable: true, Settings: `{"decryption":"none","encryption":"none","fallbacks":[],"clients":[]}`, StreamSettings: `{"network":"tcp","security":"reality","realitySettings":{"privateKey":"test","target":"example.org:443","serverNames":["example.org"],"shortIds":["ab"]}}`, Sniffing: `{"enabled":false}`}
 	must(r.AddInbound(ctx, ib))
 	ib.Id = 1
 	options, err := r.ListInboundOptions(ctx)
@@ -86,7 +86,7 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 		t.Fatal("full updater accepted")
 	}
 	must(r.DelInbound(ctx, ib))
-	plain := &model.Inbound{Tag: "n1-in-19090", Port: 19090, Protocol: "vless", Enable: true, Settings: `{"decryption":"none","clients":[]}`, StreamSettings: `{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`, Sniffing: `{"enabled":false}`}
+	plain := &model.Inbound{Tag: "n1-in-19090", Port: 19090, Protocol: "vless", Enable: true, Settings: `{"decryption":"none","encryption":"none","fallbacks":[],"clients":[]}`, StreamSettings: `{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`, Sniffing: `{"enabled":false}`}
 	must(r.AddInbound(ctx, plain))
 	options, err = r.ListInboundOptions(ctx)
 	must(err)
