@@ -116,6 +116,43 @@ func TestCumulativeStatsGlobalResetAndRestart(t *testing.T) {
 	}
 }
 
+func TestDefaultClientIsInjectedOnlyIntoEmptyVLESSInbound(t *testing.T) {
+	e := &fakeEngine{values: map[string]int64{}}
+	c := Config{
+		StateFile:          filepath.Join(t.TempDir(), "state.json"),
+		Token:              strings.Repeat("x", 64),
+		BasePath:           "/",
+		APIPort:            62789,
+		DefaultClientUUID:  "00000000-0000-4000-8000-000000000099",
+		DefaultClientEmail: "master-default",
+	}
+	n, err := New(c, e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty := testInbound()
+	empty.SetClients(nil)
+	if _, err = n.PutInbound(empty, 0); err != nil {
+		t.Fatal(err)
+	}
+	clients, err := n.Inbounds()[0].Clients()
+	if err != nil || len(clients) != 1 || clients[0].Text("id") != c.DefaultClientUUID {
+		t.Fatalf("empty VLESS inbound did not receive default client: %+v, %v", clients, err)
+	}
+
+	manual := testInbound()
+	manual.Port, manual.Tag = 18444, "manual-client"
+	manual.SetClients([]Client{testClient("manual", "00000000-0000-4000-8000-000000000010")})
+	if _, err = n.PutInbound(manual, 0); err != nil {
+		t.Fatal(err)
+	}
+	clients, err = n.Inbounds()[1].Clients()
+	if err != nil || len(clients) != 1 || clients[0].Text("email") != "manual" {
+		t.Fatalf("existing client was overwritten: %+v, %v", clients, err)
+	}
+
+}
+
 func TestInboundResetDoesNotResetClientQuota(t *testing.T) {
 	n, e := testNode(t)
 	e.values["user>>>alice>>>traffic>>>uplink"] = 100

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -74,12 +73,13 @@ func run() error {
 		return nil
 	case "rotate-token":
 		c.Token = node.RandomHex(32)
-		b, _ := json.MarshalIndent(c, "", "  ")
-		if err = node.AtomicWrite(*path, b, true); err != nil {
+		if err = node.SaveConfig(*path, c); err != nil {
 			return err
 		}
 		fmt.Println("Token rotated. Restart 3x-ui-node, then update the master using credentials.")
 		return nil
+	case "default-client":
+		return defaultClient(*path, c, f.Args(), os.Stdout)
 	case "check":
 		if _, err = tls.LoadX509KeyPair(c.CertFile, c.KeyFile); err != nil {
 			return err
@@ -102,7 +102,7 @@ func run() error {
 		return runMenu(c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, version")
+		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)
@@ -154,6 +154,44 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+func defaultClient(path string, c node.Config, args []string, out io.Writer) error {
+	if len(args) == 0 || args[0] == "show" {
+		if c.DefaultClientUUID == "" {
+			fmt.Fprintln(out, "Default client: not configured")
+			return nil
+		}
+		fmt.Fprintf(out, "Default client UUID: %s\nDefault client email: %s\n", c.DefaultClientUUID, c.DefaultClientEmail)
+		return nil
+	}
+	switch args[0] {
+	case "set":
+		if len(args) != 3 {
+			return fmt.Errorf("usage: 3x-ui-node default-client set UUID EMAIL")
+		}
+		c.DefaultClientUUID, c.DefaultClientEmail = args[1], args[2]
+		if err := node.ValidateDefaultClient(c.DefaultClientUUID, c.DefaultClientEmail); err != nil {
+			return err
+		}
+		if err := node.SaveConfig(path, c); err != nil {
+			return err
+		}
+		fmt.Fprintln(out, "Default client saved. Run: rc-service 3x-ui-node restart")
+		return nil
+	case "clear":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: 3x-ui-node default-client clear")
+		}
+		c.DefaultClientUUID, c.DefaultClientEmail = "", ""
+		if err := node.SaveConfig(path, c); err != nil {
+			return err
+		}
+		fmt.Fprintln(out, "Default client cleared. Run: rc-service 3x-ui-node restart")
+		return nil
+	default:
+		return fmt.Errorf("usage: 3x-ui-node default-client [show|set UUID EMAIL|clear]")
+	}
 }
 
 func status(c node.Config) error {

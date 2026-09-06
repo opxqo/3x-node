@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -20,14 +21,16 @@ import (
 )
 
 type Config struct {
-	Listen     string `json:"listen"`
-	BasePath   string `json:"basePath"`
-	Token      string `json:"token"`
-	CertFile   string `json:"certFile"`
-	KeyFile    string `json:"keyFile"`
-	StateFile  string `json:"stateFile"`
-	XrayBinary string `json:"xrayBinary"`
-	APIPort    int    `json:"xrayApiPort"`
+	Listen             string `json:"listen"`
+	BasePath           string `json:"basePath"`
+	Token              string `json:"token"`
+	CertFile           string `json:"certFile"`
+	KeyFile            string `json:"keyFile"`
+	StateFile          string `json:"stateFile"`
+	XrayBinary         string `json:"xrayBinary"`
+	APIPort            int    `json:"xrayApiPort"`
+	DefaultClientUUID  string `json:"defaultClientUUID,omitempty"`
+	DefaultClientEmail string `json:"defaultClientEmail,omitempty"`
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -64,7 +67,48 @@ func LoadConfig(path string) (Config, error) {
 	if c.APIPort < 1024 || c.APIPort > 65535 {
 		return c, errors.New("xrayApiPort must be 1024..65535")
 	}
+	if (c.DefaultClientUUID == "") != (c.DefaultClientEmail == "") {
+		return c, errors.New("default client UUID and email must be configured together")
+	}
+	if err := ValidateDefaultClient(c.DefaultClientUUID, c.DefaultClientEmail); err != nil {
+		return c, err
+	}
 	return c, nil
+}
+
+// DefaultClient returns the leaf-only compatibility client injected into empty
+// VLESS inbounds received from an unchanged master panel.
+func (c Config) DefaultClient() Client {
+	client := Client{}
+	client.Set("id", c.DefaultClientUUID)
+	client.Set("email", c.DefaultClientEmail)
+	client.Set("enable", true)
+	client.Set("flow", "")
+	client.Set("totalGB", int64(0))
+	client.Set("expiryTime", int64(0))
+	return client
+}
+
+func ValidateDefaultClient(uuid, email string) error {
+	if uuid == "" && email == "" {
+		return nil
+	}
+	if uuid == "" || email == "" {
+		return errors.New("default client UUID and email must be configured together")
+	}
+	c := Config{DefaultClientUUID: uuid, DefaultClientEmail: email}.DefaultClient()
+	if err := validateClient(c); err != nil {
+		return fmt.Errorf("invalid default client: %w", err)
+	}
+	return nil
+}
+
+func SaveConfig(path string, c Config) error {
+	b, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	return AtomicWrite(path, b, true)
 }
 
 func InitConfig(path, listen, stateFile, xray string) (Config, error) {

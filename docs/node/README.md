@@ -20,12 +20,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.5-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.6-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。将匹配架构的包和仓库中的安装脚本传到 VPS：
 
 ```sh
-sh install.sh install ./3x-ui-node-0.1.5-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh install ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node credentials
 3x-ui-node status
 ```
@@ -68,8 +68,25 @@ sh install.sh install ./3x-ui-node-0.1.5-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node menu errors
 ```
 
+### 主面板不变时的默认客户端兼容模式
+
+如果主面板只创建空 VLESS 入站、未同步客户端，可在副节点保存一组默认客户端。随后副节点仅会为**客户端列表为空**的 VLESS 入站自动补入该客户端；已有客户端不会覆盖，非 VLESS 入站不会处理。
+
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.5-linux-amd64.tar.gz TRUSTED_SHA256
+3x-ui-node default-client set UUID EMAIL
+rc-service 3x-ui-node restart
+3x-ui-node default-client show
+```
+
+清除该兼容配置：
+
+```sh
+3x-ui-node default-client clear
+rc-service 3x-ui-node restart
+```
+
+```sh
+sh install.sh upgrade ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

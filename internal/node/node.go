@@ -323,6 +323,9 @@ func (n *Node) Inbounds() []Inbound {
 
 func (n *Node) PutInbound(ib Inbound, id int) (any, error) {
 	return n.transaction(func(s *State) (any, error) {
+		if err := n.injectDefaultClient(&ib); err != nil {
+			return nil, err
+		}
 		if id == 0 {
 			for _, old := range s.Inbounds {
 				if old.Tag == ib.Tag {
@@ -348,6 +351,25 @@ func (n *Node) PutInbound(ib Inbound, id int) (any, error) {
 		ib.ClientStats = nil
 		return ib, nil
 	})
+}
+
+// injectDefaultClient is a leaf-only compatibility layer for master panels
+// which create a VLESS inbound before they send a matching client record. It
+// deliberately acts only on an empty client list, so a real client payload or
+// manually managed inbound is never overwritten.
+func (n *Node) injectDefaultClient(ib *Inbound) error {
+	if ib.Protocol != "vless" || n.Config.DefaultClientUUID == "" {
+		return nil
+	}
+	clients, err := ib.Clients()
+	if err != nil {
+		return err
+	}
+	if len(clients) != 0 {
+		return nil
+	}
+	ib.SetClients([]Client{n.Config.DefaultClient()})
+	return nil
 }
 
 func (n *Node) DeleteInbound(id int) (any, error) {
