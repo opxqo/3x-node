@@ -20,12 +20,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.4-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.5-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。将匹配架构的包和仓库中的安装脚本传到 VPS：
 
 ```sh
-sh install.sh install ./3x-ui-node-0.1.4-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh install ./3x-ui-node-0.1.5-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node credentials
 3x-ui-node status
 ```
@@ -54,8 +54,22 @@ sh install.sh install ./3x-ui-node-0.1.4-linux-amd64.tar.gz TRUSTED_SHA256
 `credentials` 显示接入信息；`rotate-token` 原子替换令牌，随后需要重启服务及更新主面板令牌。
 所有命令支持 `-config /absolute/path/config.json`。
 
+`menu` 是终端中的只读快捷查询，不会重启服务、修改入站或显示 API Token：
+
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.4-linux-amd64.tar.gz TRUSTED_SHA256
+# 交互菜单：状态、入站、客户端流量、监听端口和 Xray 错误
+3x-ui-node menu
+
+# 适合脚本或快速排查的单项查询
+3x-ui-node menu status
+3x-ui-node menu inbounds
+3x-ui-node menu clients
+3x-ui-node menu ports
+3x-ui-node menu errors
+```
+
+```sh
+sh install.sh upgrade ./3x-ui-node-0.1.5-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

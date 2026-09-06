@@ -98,9 +98,11 @@ func run() error {
 		return nil
 	case "status":
 		return status(c)
+	case "menu":
+		return runMenu(c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, status, credentials, rotate-token, version")
+		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)
@@ -155,31 +157,40 @@ func run() error {
 }
 
 func status(c node.Config) error {
-	_, port, err := net.SplitHostPort(c.Listen)
+	client, endpoint, err := apiClient(c, "server/status")
 	if err != nil {
 		return err
 	}
-	b, err := os.ReadFile(c.CertFile)
-	if err != nil {
-		return err
-	}
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(b)
-	client := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, ServerName: "localhost", MinVersion: tls.VersionTLS12}}}
 	defer client.CloseIdleConnections()
-	r, err := http.NewRequest(http.MethodGet, "https://127.0.0.1:"+port+c.BasePath+"panel/api/server/status", nil)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
 	}
-	r.Header.Set("Authorization", "Bearer "+c.Token)
-	resp, err := client.Do(r)
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("API returned %s", resp.Status)
 	}
 	_, err = io.Copy(os.Stdout, io.LimitReader(resp.Body, node.MaxBody))
 	return err
+}
+
+func apiClient(c node.Config, path string) (*http.Client, string, error) {
+	_, port, err := net.SplitHostPort(c.Listen)
+	if err != nil {
+		return nil, "", err
+	}
+	b, err := os.ReadFile(c.CertFile)
+	if err != nil {
+		return nil, "", err
+	}
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(b)
+	client := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, ServerName: "localhost", MinVersion: tls.VersionTLS12}}}
+	endpoint := "https://127.0.0.1:" + port + c.BasePath + "panel/api/" + path
+	return client, endpoint, nil
 }
