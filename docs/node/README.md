@@ -20,12 +20,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.6-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.7-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。将匹配架构的包和仓库中的安装脚本传到 VPS：
 
 ```sh
-sh install.sh install ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh install ./3x-ui-node-0.1.7-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node credentials
 3x-ui-node status
 ```
@@ -54,7 +54,7 @@ sh install.sh install ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
 `credentials` 显示接入信息；`rotate-token` 原子替换令牌，随后需要重启服务及更新主面板令牌。
 所有命令支持 `-config /absolute/path/config.json`。
 
-`menu` 是终端中的只读快捷查询，不会重启服务、修改入站或显示 API Token：
+`menu` 提供与 `x-ui` 风格一致的分区管理菜单：状态、入站、客户端、日志、服务控制与默认客户端配置。`13` 是手动添加客户端，逐步询问入站 ID、UUID、名称和启用状态，并在写入前要求确认：
 
 ```sh
 # 交互菜单：状态、入站、客户端流量、监听端口和 Xray 错误
@@ -67,6 +67,8 @@ sh install.sh install ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node menu ports
 3x-ui-node menu errors
 ```
+
+安装在专用副节点时，若系统尚未存在完整面板的 `x-ui` 命令，安装器会额外创建兼容入口；可直接输入 `x-ui` 打开菜单。
 
 ### 主面板不变时的默认客户端兼容模式
 
@@ -86,7 +88,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.6-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.7-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

@@ -31,6 +31,9 @@ func main() {
 func run() error {
 	command := "serve"
 	args := os.Args[1:]
+	if filepath.Base(os.Args[0]) == "x-ui" && len(args) == 0 {
+		command = "menu"
+	}
 	if len(args) > 0 {
 		command = args[0]
 		args = args[1:]
@@ -99,7 +102,7 @@ func run() error {
 	case "status":
 		return status(c)
 	case "menu":
-		return runMenu(c, f.Args(), os.Stdin, os.Stdout)
+		return runMenu(*path, c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
 		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, version")

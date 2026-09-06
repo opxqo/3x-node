@@ -65,6 +65,9 @@ cp "$stage/3x-ui-node" "$stage/xray" "$stage/service" "$stage/manifest" "$stage/
 ln -s "$release" "$base/current.next"
 mv -Tf "$base/current.next" "$base/current"
 ln -sf "$base/current/3x-ui-node" /usr/local/bin/3x-ui-node
+if [ ! -e /usr/local/bin/x-ui ] && [ ! -L /usr/local/bin/x-ui ]; then
+    ln -s "$base/current/3x-ui-node" /usr/local/bin/x-ui
+fi
 cp "$release/service" /etc/init.d/3x-ui-node
 chmod 755 /etc/init.d/3x-ui-node
 if [ "$action" = install ]; then

@@ -30,10 +30,37 @@ func TestSummarizeInboundDefaults(t *testing.T) {
 
 func TestMenuHelpDoesNotNeedConfig(t *testing.T) {
 	var output stdbytes.Buffer
-	if err := runMenu(node.Config{}, []string{"help"}, nil, &output); err != nil {
+	if err := runMenu("/tmp/config.json", node.Config{}, []string{"help"}, nil, &output); err != nil {
 		t.Fatal(err)
 	}
 	if output.Len() == 0 {
 		t.Fatal("expected help output")
+	}
+}
+
+func TestManualClientBuildsUsableDefaults(t *testing.T) {
+	client, err := manualClient("", "alice", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.Text("email") != "alice" || !client.Enabled() || client.Text("flow") != "" {
+		t.Fatalf("unexpected client: %#v", client)
+	}
+	id := client.Text("id")
+	if len(id) != 36 || id[8] != '-' || id[13] != '-' || id[18] != '-' || id[23] != '-' {
+		t.Fatalf("generated UUID is invalid: %q", id)
+	}
+}
+
+func TestInboundIDsAcceptsCommaSeparatedPositiveIDs(t *testing.T) {
+	ids, err := inboundIDs("5, 12")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 2 || ids[0] != 5 || ids[1] != 12 {
+		t.Fatalf("IDs = %#v, want [5 12]", ids)
+	}
+	if _, err := inboundIDs("5,zero"); err == nil {
+		t.Fatal("invalid inbound IDs were accepted")
 	}
 }
