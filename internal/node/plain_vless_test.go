@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,10 +31,6 @@ func TestPlainVLESSTCPConnection(t *testing.T) {
 	cfg := Config{StateFile: filepath.Join(dir, "state.json"), XrayBinary: binary, APIPort: freePort(t), Token: strings.Repeat("a", 64), BasePath: "/"}
 	core := NewCore(cfg)
 	core.Log = &RotatingLog{Path: filepath.Join(dir, "server.log")}
-	core.configForTest = func(config map[string]any) {
-		_, originPort, _ := net.SplitHostPort(origin.Listener.Addr().String())
-		config["outbounds"] = []any{map[string]any{"tag": "direct", "protocol": "freedom", "settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow", "network": "tcp", "ip": []string{"127.0.0.1/32"}, "port": originPort}}}}}
-	}
 	n, err := New(cfg, core)
 	if err != nil {
 		t.Fatal(err)

@@ -282,7 +282,9 @@ func (c *Core) xrayConfig(in []LiveInbound) map[string]any {
 	}
 	return map[string]any{
 		"log": map[string]any{"loglevel": "warning", "access": "none"}, "inbounds": inbounds,
-		"outbounds": []any{map[string]any{"tag": "direct", "protocol": "freedom", "settings": map[string]any{}}},
+		// Xray's Freedom outbound is deny-by-default when finalRules is omitted.
+		// Keep the node's only egress explicit: proxy traffic may leave directly.
+		"outbounds": []any{map[string]any{"tag": "direct", "protocol": "freedom", "settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow"}}}}},
 		"api":       map[string]any{"tag": "api", "services": []string{"HandlerService", "StatsService"}}, "stats": map[string]any{},
 		"routing": map[string]any{"domainStrategy": "AsIs", "rules": []any{map[string]any{"type": "field", "inboundTag": []string{"api"}, "outboundTag": "api"}}},
 		"policy":  map[string]any{"levels": map[string]any{"0": map[string]any{"bufferSize": 0, "statsUserUplink": true, "statsUserDownlink": true}}, "system": map[string]any{"statsInboundUplink": true, "statsInboundDownlink": true}},
