@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.3-node"
+	Version     = "0.1.4-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -350,7 +350,11 @@ func ValidateInbound(i *Inbound) error {
 
 func validateClient(c Client) error {
 	for name, value := range c {
-		if !slices.Contains([]string{"id", "email", "enable", "flow", "security", "totalGB", "expiryTime", "subId", "tgId", "group", "comment", "created_at", "updated_at", "trafficReset"}, name) && !emptyJSON(value) {
+		// The full panel always serializes trafficResetDay as 1, even when
+		// trafficReset is "never". It is harmless metadata for this node: retain
+		// it for a lossless round trip, while the check below still rejects every
+		// periodic reset mode that the lightweight node does not implement.
+		if !slices.Contains([]string{"id", "email", "enable", "flow", "security", "totalGB", "expiryTime", "subId", "tgId", "group", "comment", "created_at", "updated_at", "trafficReset", "trafficResetDay"}, name) && !emptyJSON(value) {
 			return fmt.Errorf("unsupported client setting %s", name)
 		}
 	}
@@ -369,7 +373,7 @@ func validateClient(c Client) error {
 	if f := c.Text("flow"); f != "" && f != "xtls-rprx-vision" {
 		return errors.New("only empty or xtls-rprx-vision flow supported")
 	}
-	for _, k := range []string{"totalGB", "expiryTime", "limitIp", "reset", "resetDay", "resetMax"} {
+	for _, k := range []string{"totalGB", "expiryTime", "limitIp", "reset", "resetDay", "resetMax", "trafficResetDay"} {
 		if v, ok := c[k]; ok {
 			var n int64
 			if err := json.Unmarshal(v, &n); err != nil {
@@ -377,6 +381,9 @@ func validateClient(c Client) error {
 			}
 			if k != "expiryTime" && n < 0 {
 				return fmt.Errorf("%s must not be negative", k)
+			}
+			if k == "trafficResetDay" && (n < 1 || n > 31) {
+				return errors.New("trafficResetDay must be 1..31")
 			}
 		}
 	}

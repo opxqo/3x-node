@@ -193,6 +193,7 @@ export default function NodeFormModal({
   }
 
   async function onFetchInbounds() {
+    if (fetchingInbounds) return;
     if (!(await methods.trigger(['name', 'address', 'port', 'apiToken']))) return;
     setFetchingInbounds(true);
     try {
@@ -434,6 +435,13 @@ export default function NodeFormModal({
                   allowClear
                   loading={fetchingInbounds}
                   placeholder={t('pages.nodes.inboundTagsPlaceholder')}
+                  // Selecting "selected inbounds" is meant to connect this
+                  // panel to the node, not require a hidden second action.
+                  // Load as soon as the picker opens; retain the text button as
+                  // an explicit refresh for a node whose configuration changed.
+                  onOpenChange={(visible) => {
+                    if (visible) void onFetchInbounds();
+                  }}
                   popupRender={(menu) => (
                     <>
                       <Button

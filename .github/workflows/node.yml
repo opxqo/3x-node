@@ -18,7 +18,7 @@ jobs:
       - name: Real Xray integration
         run: |
           mkdir -p /tmp/node-package
-          tar -xzf dist/node/3x-ui-node-0.1.3-linux-amd64.tar.gz -C /tmp/node-package
+          tar -xzf dist/node/3x-ui-node-0.1.4-linux-amd64.tar.gz -C /tmp/node-package
           NODE_XRAY_TEST_BINARY=/tmp/node-package/xray go test -race -v ./internal/node
       - name: Constrained service test
         run: sh scripts/node/run-lab.sh 60s

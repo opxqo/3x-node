@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
@@ -56,7 +57,11 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 		t.Fatalf("options: %+v", options)
 	}
 	must(r.SetInboundSubSortIndex(ctx, ib, 2))
-	alice := model.Client{ID: "00000000-0000-4000-8000-000000000001", Email: "alice", Enable: true, Flow: "xtls-rprx-vision", SubID: "share-id"}
+	// This is the real default emitted by the full panel's client form.
+	// trafficResetDay is present even when the reset mode is "never"; rejecting
+	// it made a successful master-side client create silently fail to reach the
+	// leaf node.
+	alice := model.Client{ID: "00000000-0000-4000-8000-000000000001", Email: "alice", Enable: true, Flow: "xtls-rprx-vision", SubID: "share-id", TrafficReset: "never", TrafficResetDay: 1}
 	must(r.AddClient(ctx, ib, alice))
 	alice.Comment = "updated"
 	must(r.UpdateUser(ctx, ib, "alice", alice))
@@ -65,6 +70,19 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 	must(err)
 	if snapshot == nil {
 		t.Fatal("missing snapshot")
+	}
+	var stored struct {
+		Clients []struct {
+			Email           string `json:"email"`
+			TrafficReset    string `json:"trafficReset"`
+			TrafficResetDay int    `json:"trafficResetDay"`
+		} `json:"clients"`
+	}
+	if err := json.Unmarshal([]byte(snapshot.Inbounds[0].Settings), &stored); err != nil {
+		t.Fatalf("decode stored client metadata: %v", err)
+	}
+	if len(stored.Clients) != 1 || stored.Clients[0].Email != "alice" || stored.Clients[0].TrafficReset != "never" || stored.Clients[0].TrafficResetDay != 1 {
+		t.Fatalf("default reset metadata was not retained: %+v", stored.Clients)
 	}
 	must(r.ResetClientTraffic(ctx, ib, "alice"))
 	must(r.ResetInboundTraffic(ctx, ib))
