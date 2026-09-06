@@ -64,6 +64,38 @@ func TestReconcileInbound_SkipsUnchanged(t *testing.T) {
 	}
 }
 
+// A compatible inbound discovered on a node has not necessarily received the
+// master's full client list.  In particular, a manually-created node inbound
+// can be adopted under a central tag while its clients still differ from the
+// subscription clients stored by the master.  Alias adoption must therefore
+// force one full reconcile before the ordinary fingerprint skip may apply.
+func TestAdoptInboundAliasForcesFirstFullReconcile(t *testing.T) {
+	srv, counts := newCountingNodeServer(t, `{"success":true}`)
+	r := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	ib := &model.Inbound{
+		Tag:      "central-hk",
+		Protocol: model.VLESS,
+		Port:     26700,
+		Settings: `{"clients":[{"id":"11111111-1111-1111-1111-111111111111","email":"master-sub","enable":true}]}`,
+	}
+
+	// The node's existing manually-created inbound has a different tag and may
+	// contain a different UUID.  It is safe to reuse its id, but not safe to
+	// assume its whole wire payload already matches ib.
+	r.AdoptInboundAlias(ib, RemoteInboundOption{Id: 4, Tag: "hk-vless-tcp-26700"})
+
+	if pushed, err := r.ReconcileInbound(context.Background(), ib, true); err != nil || !pushed {
+		t.Fatalf("first reconcile after alias adoption: pushed=%v err=%v, want full push", pushed, err)
+	}
+	if got := counts.inboundUpdates.Load(); got != 1 {
+		t.Fatalf("full inbound updates=%d, want 1", got)
+	}
+
+	if pushed, err := r.ReconcileInbound(context.Background(), ib, true); err != nil || pushed {
+		t.Fatalf("second unchanged reconcile: pushed=%v err=%v, want skip", pushed, err)
+	}
+}
+
 type nodeCallCounts struct {
 	adds            atomic.Int32
 	inboundUpdates  atomic.Int32
