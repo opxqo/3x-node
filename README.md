@@ -94,6 +94,16 @@ Every release asset is published with a `.sha256` sum next to it. Both `install.
 
 For full documentation — installation, configuration, operations, and the complete API reference — visit **[docs.sanaei.dev](https://docs.sanaei.dev)**.
 
+### Lightweight node
+
+For the experimental **Alpine/OpenRC lightweight node** (amd64/arm64), use the separate installer:
+
+```sh
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
+```
+
+This installs the pinned `0.1.14-node` release after SHA256 verification. See the [node guide](docs/node/README.md) for supported features, credentials, and upgrades.
+
 ### Unattended install
 
 The installer also runs **non-interactively** for cloud-init.

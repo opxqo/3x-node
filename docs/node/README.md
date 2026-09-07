@@ -22,6 +22,25 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 
 ## 构建与安装
 
+### VPS 一行安装
+
+以 root 身份在 Alpine/OpenRC 上执行（支持 amd64、arm64）：
+
+```sh
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
+```
+
+入口自动识别架构，下载 `v0.1.14-node`，验证脚本内固定 SHA256，安装并启动服务。
+兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
+安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
+已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
+已经是目标版本则直接返回，不重启服务。后续发布节点版时需同步更新入口中的版本及两个架构摘要。
+
+安装完成后执行 `3x-ui-node credentials`，将节点 Token 和 TLS 指纹填入主面板。
+根目录 `install.sh` 是完整面板安装器，精简节点使用 `install-node.sh`。
+
+### 本地构建与手动安装
+
 开发机需要 Go（以仓库 go.mod 为准）、curl、unzip、OpenSSL、tar：
 
 ```sh
