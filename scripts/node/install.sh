@@ -67,14 +67,16 @@ tar -xzf "$package" -C "$tmp_release"
 [ "$(sed -n '4p' "$tmp_release/manifest")" = 26.7.28 ] || die 'Wrong Xray version.'
 chown 0:0 "$tmp_release"/*
 chmod 755 "$tmp_release/3x-ui-node" "$tmp_release/xray"
-"$tmp_release/3x-ui-node" version
-"$tmp_release/xray" version | head -n 1
 old=''
 if [ "$action" = upgrade ]; then
     old=$(readlink "$base/current")
     rc-service 3x-ui-node stop
     [ ! -f /var/lib/3x-ui-node/state.json ] || cp -p /var/lib/3x-ui-node/state.json /var/lib/3x-ui-node/state.pre-upgrade.json
 fi
+# Do not execute a second Xray process during installation. On a 128MiB
+# cgroup the running node already owns almost all memory, and `xray version`
+# can create a transient OOM before activation. The archive's manifest and
+# checksum already pin the expected Xray release.
 mv "$tmp_release" "$release"
 tmp_release=''
 ln -s "$release" "$base/current.next"

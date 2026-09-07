@@ -20,12 +20,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.11-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.12-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.11-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.12-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -101,7 +101,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.11-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.12-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
