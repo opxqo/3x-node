@@ -83,6 +83,21 @@ func masterEndpoint(base string) (string, error) {
 	return u.String(), nil
 }
 
+// NormalizeMasterBaseURL accepts either the configured API root or the panel's
+// /panel/api-docs URL, then returns the API root used by synchronization.
+func NormalizeMasterBaseURL(value string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return "", errors.New("master sync baseURL must be an https URL without credentials, query, or fragment")
+	}
+	path := strings.TrimRight(u.Path, "/")
+	if strings.HasSuffix(path, "/panel/api-docs") {
+		path = strings.TrimSuffix(path, "/panel/api-docs")
+	}
+	u.Path = path
+	return strings.TrimRight(u.String(), "/"), nil
+}
+
 type masterInboundEnvelope struct {
 	Success bool      `json:"success"`
 	Msg     string    `json:"msg"`

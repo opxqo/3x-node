@@ -118,3 +118,13 @@ func TestValidateMasterSyncRejectsUnsafeConfiguration(t *testing.T) {
 		t.Fatal("test config unexpectedly contains plaintext token")
 	}
 }
+
+func TestNormalizeMasterBaseURLRemovesAPIDocsSuffix(t *testing.T) {
+	got, err := NormalizeMasterBaseURL("https://master.example:8443/random-prefix/panel/api-docs")
+	if err != nil || got != "https://master.example:8443/random-prefix" {
+		t.Fatalf("normalized URL = %q, err=%v", got, err)
+	}
+	if _, err = NormalizeMasterBaseURL("https://master.example/panel/api-docs?token=secret"); err == nil {
+		t.Fatal("URL query was accepted")
+	}
+}

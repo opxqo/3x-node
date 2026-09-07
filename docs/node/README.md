@@ -66,7 +66,16 @@ sh install.sh install ./3x-ui-node-0.1.7-linux-amd64.tar.gz TRUSTED_SHA256
 3x-ui-node menu clients
 3x-ui-node menu ports
 3x-ui-node menu errors
+
+# 主面板同步（需要副面板服务正在运行）
+3x-ui-node sync configure
+3x-ui-node sync status
+3x-ui-node sync preview
+3x-ui-node sync now
+3x-ui-node sync disable
 ```
+
+交互菜单中的 `15`–`19` 分别对应配置、状态、预览、立即同步和停用。预览只显示数量与冲突，不显示 UUID；同步 worker 在服务内串行执行，主面板不可用时保留副面板当前有效配置。配置向导把主面板 Token 写入独立的 0600 文件，不写入配置 JSON。
 
 安装在专用副节点时，若系统尚未存在完整面板的 `x-ui` 命令，安装器会额外创建兼容入口；可直接输入 `x-ui` 打开菜单。
 

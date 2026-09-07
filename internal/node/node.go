@@ -22,6 +22,13 @@ type Node struct {
 	save       func(string, *State) error
 	metrics    Metrics
 	halted     bool
+	masterSync *MasterSyncWorker
+}
+
+func (n *Node) AttachMasterSyncWorker(worker *MasterSyncWorker) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.masterSync = worker
 }
 
 func New(c Config, e Engine) (*Node, error) {

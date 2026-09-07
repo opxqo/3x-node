@@ -85,11 +85,21 @@ type Inbound struct {
 }
 
 func (i Inbound) Clients() ([]Client, error) {
+	clients, _, err := i.ClientList()
+	return clients, err
+}
+
+// ClientList distinguishes a valid empty clients array from a malformed or
+// incomplete source payload where the clients field is absent.
+func (i Inbound) ClientList() ([]Client, bool, error) {
 	var s struct {
-		Clients []Client `json:"clients"`
+		Clients *[]Client `json:"clients"`
 	}
 	err := json.Unmarshal(i.Settings, &s)
-	return s.Clients, err
+	if err != nil || s.Clients == nil {
+		return nil, false, err
+	}
+	return *s.Clients, true, nil
 }
 
 func (i *Inbound) SetClients(cs []Client) {
@@ -140,6 +150,7 @@ type State struct {
 	Inbounds     []Inbound                    `json:"inbounds"`
 	Traffic      map[string]*Traffic          `json:"traffic"`
 	Globals      map[string]map[string]Global `json:"globals"`
+	MasterSync   []MasterSyncState            `json:"masterSync,omitempty"`
 }
 
 func (s *State) Clone() *State {

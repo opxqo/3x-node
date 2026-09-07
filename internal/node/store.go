@@ -51,6 +51,9 @@ func LoadState(path string) (*State, error) {
 	if len(s.Inbounds) > MaxInbounds || len(s.Traffic) > MaxClients || len(s.Globals) > 8 {
 		return nil, errors.New("stored state exceeds limits")
 	}
+	if err = validateMasterSyncState(s.MasterSync); err != nil {
+		return nil, err
+	}
 	ids, ports, tags := map[int]bool{}, map[int]bool{}, map[string]bool{}
 	for j := range s.Inbounds {
 		ib := s.Inbounds[j]

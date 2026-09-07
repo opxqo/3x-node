@@ -464,11 +464,12 @@ func showLogs(c node.Config, out io.Writer) error {
 }
 
 func menuHelp(w io.Writer) {
-	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client]")
-	fmt.Fprintln(w, "不带子命令时进入交互菜单；13 为手动添加客户端。")
+	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|sync-status|sync-preview|sync-now|add-client]")
+	fmt.Fprintln(w, "不带子命令时进入交互菜单；13 为手动添加客户端，15-19 为主面板同步操作。")
 }
 
 func runMenu(configPath string, c node.Config, args []string, in io.Reader, out io.Writer) error {
+	terminal := isTerminalInput(in)
 	show := func(command string) error {
 		switch command {
 		case "status":
@@ -481,6 +482,12 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 			return showPorts(out, c)
 		case "errors":
 			return showErrors(out, c)
+		case "sync-status":
+			return syncCommand(configPath, c, []string{"status"}, in, out, terminal)
+		case "sync-preview":
+			return syncCommand(configPath, c, []string{"preview"}, in, out, terminal)
+		case "sync-now":
+			return syncCommand(configPath, c, []string{"now"}, in, out, terminal)
 		case "add-client":
 			return addClientInteractive(c, bufio.NewReader(in), out)
 		case "help", "-h", "--help":
@@ -508,8 +515,11 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 		fmt.Fprintln(out, "║  9) 重启服务      10) 查看日志                ║")
 		fmt.Fprintln(out, "║ 11) 默认客户端    12) 设置默认客户端           ║")
 		fmt.Fprintln(out, "║ 13) 手动添加客户端 14) 删除客户端              ║")
+		fmt.Fprintln(out, "║ 15) 配置主面板同步 16) 同步状态                ║")
+		fmt.Fprintln(out, "║ 17) 预览同步差异   18) 立即同步                ║")
+		fmt.Fprintln(out, "║ 19) 停用主面板同步                              ║")
 		fmt.Fprintln(out, "╚══════════════════════════════════════════════╝")
-		fmt.Fprint(out, "请输入选项 [0-14]: ")
+		fmt.Fprint(out, "请输入选项 [0-19]: ")
 		choice, err := reader.ReadString('\n')
 		if err != nil && len(choice) == 0 {
 			return nil
@@ -552,6 +562,24 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 			err = addClientInteractive(c, reader, out)
 		case "14":
 			err = deleteClientInteractive(c, reader, out)
+		case "15":
+			err = syncCommand(configPath, c, []string{"configure"}, reader, out, terminal)
+		case "16":
+			err = show("sync-status")
+		case "17":
+			err = show("sync-preview")
+		case "18":
+			var confirm string
+			confirm, err = prompt(reader, out, "立即从主面板同步并应用？y/n", "n")
+			if err == nil && (strings.EqualFold(confirm, "y") || strings.EqualFold(confirm, "yes")) {
+				err = show("sync-now")
+			}
+		case "19":
+			var confirm string
+			confirm, err = prompt(reader, out, "确认停用主面板同步？y/n", "n")
+			if err == nil && (strings.EqualFold(confirm, "y") || strings.EqualFold(confirm, "yes")) {
+				err = syncCommand(configPath, c, []string{"disable"}, reader, out, terminal)
+			}
 		case "0", "q", "Q":
 			return nil
 		default:

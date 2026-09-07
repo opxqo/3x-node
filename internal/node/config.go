@@ -99,6 +99,9 @@ func LoadConfig(path string) (Config, error) {
 	if err := ValidateMasterSync(c.MasterSync); err != nil {
 		return c, err
 	}
+	if c.MasterSync.Enabled && c.MasterSync.IntervalSeconds == 0 {
+		c.MasterSync.IntervalSeconds = DefaultMasterSyncInterval
+	}
 	return c, nil
 }
 
@@ -125,22 +128,7 @@ func ValidateMasterSync(s MasterSyncConfig) error {
 	if err := ValidateSHA256Fingerprint(s.CertSHA256); err != nil {
 		return fmt.Errorf("master sync certSHA256: %w", err)
 	}
-	if len(s.Mappings) == 0 || len(s.Mappings) > MaxInbounds {
-		return fmt.Errorf("master sync mappings must contain 1..%d entries", MaxInbounds)
-	}
-	seen := map[string]bool{}
-	masters := map[int]bool{}
-	locals := map[int]bool{}
-	for _, m := range s.Mappings {
-		if m.ID == "" || strings.ContainsAny(m.ID, "/\\\x00") || seen[m.ID] {
-			return errors.New("master sync mapping IDs must be non-empty and unique")
-		}
-		if m.MasterInboundID < 1 || m.LocalInboundID < 1 || masters[m.MasterInboundID] || locals[m.LocalInboundID] {
-			return errors.New("master sync inbound IDs must be positive and unique")
-		}
-		seen[m.ID], masters[m.MasterInboundID], locals[m.LocalInboundID] = true, true, true
-	}
-	return nil
+	return validateMasterSyncMappings(s.Mappings)
 }
 
 // DefaultClient returns the leaf-only compatibility client injected into empty
