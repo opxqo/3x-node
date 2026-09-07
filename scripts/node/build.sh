@@ -27,8 +27,8 @@ for arch in amd64 arm64; do
     unzip -p "$stage/$asset" LICENSE > "$dir/XRAY-LICENSE"
     cp docs/node/README.md "$dir/README.md"
     cp docs/node/VALIDATION.md "$dir/VALIDATION.md"
-	printf '3x-ui-node\n0.1.12-node\n%s\n26.7.28\n' "$arch" > "$dir/manifest"
-	archive="$out/3x-ui-node-0.1.12-linux-$arch.tar.gz"
+	printf '3x-ui-node\n0.1.14-node\n%s\n26.7.28\n' "$arch" > "$dir/manifest"
+	archive="$out/3x-ui-node-0.1.14-linux-$arch.tar.gz"
     COPYFILE_DISABLE=1 tar -czf "$archive" -C "$dir" 3x-ui-node xray service install.sh LICENSE XRAY-LICENSE README.md VALIDATION.md manifest
     openssl dgst -sha256 "$archive" > "$archive.sha256"
 done

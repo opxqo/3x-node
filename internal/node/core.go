@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -126,9 +128,14 @@ func (c *Core) Apply(next []LiveInbound) error {
 }
 
 func cloneLive(in []LiveInbound) []LiveInbound {
-	b, _ := json.Marshal(in)
-	var out []LiveInbound
-	_ = json.Unmarshal(b, &out)
+	out := slices.Clone(in)
+	for j := range out {
+		// Preserve Object canonicalization used by runtime rollback comparisons.
+		out[j].Stream = nil
+		raw, _ := in[j].Stream.MarshalJSON()
+		_ = out[j].Stream.UnmarshalJSON(raw)
+		out[j].Users = maps.Clone(in[j].Users)
+	}
 	return out
 }
 

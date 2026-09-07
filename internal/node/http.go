@@ -43,33 +43,6 @@ func (n *Node) Handler() http.Handler {
 	}
 	add("GET", "server/status", func(_ *http.Request) (any, error) { return n.Status(), nil })
 	add("GET", "inbounds/list", func(_ *http.Request) (any, error) { return n.Inbounds(), nil })
-	addLocal := func(method, path string, fn func(*http.Request) (any, error)) {
-		add(method, path, func(r *http.Request) (any, error) {
-			host, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil || (host != "127.0.0.1" && host != "::1") {
-				return nil, errors.New("sync management is local-only")
-			}
-			return fn(r)
-		})
-	}
-	addLocal("GET", "sync/status", func(_ *http.Request) (any, error) {
-		if n.masterSync == nil {
-			return nil, errors.New("master sync worker unavailable")
-		}
-		return n.masterSync.Status(), nil
-	})
-	addLocal("POST", "sync/preview", func(r *http.Request) (any, error) {
-		if n.masterSync == nil {
-			return nil, errors.New("master sync worker unavailable")
-		}
-		return n.masterSync.Preview(r.Context())
-	})
-	addLocal("POST", "sync/now", func(r *http.Request) (any, error) {
-		if n.masterSync == nil {
-			return nil, errors.New("master sync worker unavailable")
-		}
-		return n.masterSync.SyncNow(r.Context())
-	})
 	for _, path := range []string{"hosts/list", "server/descendants", "server/clientIps"} {
 		add("GET", path, func(_ *http.Request) (any, error) { return []any{}, nil })
 	}

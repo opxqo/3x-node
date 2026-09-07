@@ -6,7 +6,7 @@ cd "$root"
 duration=${1:-60s}
 go_bin=${GO_BIN:-go}
 case "$(docker info --format '{{.Architecture}}')" in aarch64|arm64) arch=arm64;; x86_64|amd64) arch=amd64;; *) exit 1;; esac
-archive="$root/dist/node/3x-ui-node-0.1.12-linux-$arch.tar.gz"
+archive="$root/dist/node/3x-ui-node-0.1.14-linux-$arch.tar.gz"
 [ -f "$archive" ] || { echo 'Build packages first.' >&2; exit 1; }
 mkdir -p "$root/.cache"
 lab=$(mktemp -d "$root/.cache/node-lab.XXXXXX")

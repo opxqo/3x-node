@@ -83,8 +83,6 @@ func run() error {
 		return nil
 	case "default-client":
 		return defaultClient(*path, c, f.Args(), os.Stdout)
-	case "sync":
-		return syncCommand(*path, c, f.Args(), os.Stdin, os.Stdout, isTerminalInput(os.Stdin))
 	case "check":
 		if _, err = tls.LoadX509KeyPair(c.CertFile, c.KeyFile); err != nil {
 			return err
@@ -107,7 +105,7 @@ func run() error {
 		return runMenu(*path, c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, sync, version")
+		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)
@@ -141,15 +139,8 @@ func run() error {
 	defer stop()
 	runCtx, stopRun := context.WithCancel(context.Background())
 	defer stopRun()
-	masterSync, err := node.NewMasterSyncWorker(n, c.MasterSync, nil)
-	if err != nil {
-		return err
-	}
-	n.AttachMasterSyncWorker(masterSync)
 	done := make(chan struct{})
 	go func() { n.Run(runCtx); close(done) }()
-	syncDone := make(chan struct{})
-	go func() { masterSync.Run(runCtx); close(syncDone) }()
 	serveDone := make(chan error, 1)
 	go func() { serveDone <- srv.Serve(listener) }()
 	select {
@@ -162,7 +153,6 @@ func run() error {
 	_ = srv.Shutdown(shutdown)
 	stopRun()
 	<-done
-	<-syncDone
 	if err != nil && err != http.ErrServerClosed {
 		return err
 	}

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.12-node"
+	Version     = "0.1.14-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -150,7 +150,6 @@ type State struct {
 	Inbounds     []Inbound                    `json:"inbounds"`
 	Traffic      map[string]*Traffic          `json:"traffic"`
 	Globals      map[string]map[string]Global `json:"globals"`
-	MasterSync   []MasterSyncState            `json:"masterSync,omitempty"`
 }
 
 func (s *State) Clone() *State {

@@ -22,13 +22,6 @@ type Node struct {
 	save       func(string, *State) error
 	metrics    Metrics
 	halted     bool
-	masterSync *MasterSyncWorker
-}
-
-func (n *Node) AttachMasterSyncWorker(worker *MasterSyncWorker) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.masterSync = worker
 }
 
 func New(c Config, e Engine) (*Node, error) {
@@ -330,6 +323,19 @@ func (n *Node) Inbounds() []Inbound {
 
 func (n *Node) PutInbound(ib Inbound, id int) (any, error) {
 	return n.transaction(func(s *State) (any, error) {
+		if ib.Protocol == "vless" {
+			clients, err := ib.Clients()
+			if err != nil {
+				return nil, err
+			}
+			for j, client := range clients {
+				clients[j], err = normalizeVLESSClient(client)
+				if err != nil {
+					return nil, err
+				}
+			}
+			ib.SetClients(clients)
+		}
 		if err := n.injectDefaultClient(&ib); err != nil {
 			return nil, err
 		}
@@ -394,7 +400,9 @@ func (n *Node) DeleteInbound(id int) (any, error) {
 func (n *Node) ChangeClient(oldEmail string, c Client, ids []int, op string) (any, error) {
 	return n.transaction(func(s *State) (any, error) {
 		if op == "add" || op == "update" {
-			if err := validateClient(c); err != nil {
+			var err error
+			c, err = normalizeVLESSClient(c)
+			if err != nil {
 				return nil, err
 			}
 		}

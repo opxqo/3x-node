@@ -12,6 +12,14 @@
 不支持其他协议、订阅服务、自动续期、IP/设备限制、嗅探、区域规则、通知及完整面板更新。
 管理接口和 VLESS 需要独立 TCP 映射；62789 是仅监听回环的内部 Xray API，禁止映射。
 
+### 0.1.14：仅保留主面板主动下发
+
+已移除副节点主动拉取的配置、令牌读取、菜单 15–19、sync 命令、HTTP 接口和后台任务。
+副节点不需要主面板 API 令牌；在主面板配置副节点地址、副节点 Token 和证书指纹即可。
+旧配置中的 masterSync 会被忽略，已有入站和客户端继续保留。升级后可删除旧 master.token。
+VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的 password、auth、secret，
+真实未实现的访问限制仍会拒绝。
+
 ## 构建与安装
 
 开发机需要 Go（以仓库 go.mod 为准）、curl、unzip、OpenSSL、tar：
@@ -20,12 +28,12 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.12-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.14-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.12-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.14-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -71,15 +79,7 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 3x-ui-node menu ports
 3x-ui-node menu errors
 
-# 主面板同步（需要副面板服务正在运行）
-3x-ui-node sync configure
-3x-ui-node sync status
-3x-ui-node sync preview
-3x-ui-node sync now
-3x-ui-node sync disable
 ```
-
-交互菜单中的 `15`–`19` 分别对应配置、状态、预览、立即同步和停用。预览只显示数量与冲突，不显示 UUID；同步 worker 在服务内串行执行，主面板不可用时保留副面板当前有效配置。配置向导把主面板 Token 写入独立的 0600 文件，不写入配置 JSON。
 
 安装在专用副节点时，若系统尚未存在完整面板的 `x-ui` 命令，安装器会额外创建兼容入口；可直接输入 `x-ui` 打开菜单。
 
@@ -101,7 +101,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.12-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.14-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

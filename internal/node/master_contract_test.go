@@ -61,7 +61,7 @@ func TestUnmodifiedMasterLeafContract(t *testing.T) {
 	// trafficResetDay is present even when the reset mode is "never"; rejecting
 	// it made a successful master-side client create silently fail to reach the
 	// leaf node.
-	alice := model.Client{ID: "00000000-0000-4000-8000-000000000001", Email: "alice", Enable: true, Flow: "xtls-rprx-vision", SubID: "share-id", TrafficReset: "never", TrafficResetDay: 1}
+	alice := model.Client{ID: "00000000-0000-4000-8000-000000000001", Email: "alice", Password: "unused-trojan-password", Auth: "unused-hysteria-auth", Secret: "unused-mtproto-secret", Enable: true, Flow: "xtls-rprx-vision", SubID: "share-id", TrafficReset: "never", TrafficResetDay: 1}
 	must(r.AddClient(ctx, ib, alice))
 	alice.Comment = "updated"
 	must(r.UpdateUser(ctx, ib, "alice", alice))
