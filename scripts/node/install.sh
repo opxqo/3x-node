@@ -31,37 +31,52 @@ free_kb=$(df -Pk /usr/local | awk 'END {print $4}')
 [ "$free_kb" -ge 307200 ] || die 'At least 300MiB free needed for safe staging and rollback.'
 command -v netstat >/dev/null || die 'BusyBox netstat is required for port checks.'
 base=/usr/local/lib/3x-ui-node
+mkdir -p "$base" /etc/3x-ui-node /var/lib/3x-ui-node
+release="$base/release-$expected"
+[ ! -e "$release" ] || die 'This release already exists; no change made.'
+
 if [ "$action" = install ]; then
     [ ! -e "$base/current" ] && [ ! -e /etc/3x-ui-node/config.json ] || die 'Existing installation: use upgrade.'
     netstat -lnt | awk '$4 ~ /:(2053|62789)$/ {found=1} END {exit !found}' && die 'Default API port 2053 or private port 62789 occupied.'
 else
     [ -L "$base/current" ] && [ -f /etc/3x-ui-node/config.json ] || die 'No managed node installation found.'
 fi
+
+# Keep only the archive index in the temporary directory. The previous
+# installer unpacked the whole package there and then copied the large Xray
+# binary into the release directory, creating an avoidable memory/page-cache
+# spike on 128MiB containers.
 stage=$(mktemp -d /usr/local/lib/3x-ui-node-stage.XXXXXX)
-trap 'rm -rf "$stage"' EXIT HUP INT TERM
+tmp_release="$base/.release-$expected.$$"
+cleanup() {
+    rm -rf -- "$stage" 2>/dev/null || true
+    if [ -n "${tmp_release:-}" ]; then
+        rm -rf -- "$tmp_release" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT HUP INT TERM
 # Only named plain files are accepted; forbid traversal, links and special files.
 tar -tzf "$package" | sort > "$stage/list"
 printf '%s\n' 3x-ui-node LICENSE XRAY-LICENSE README.md VALIDATION.md install.sh manifest service xray | sort > "$stage/expected"
 cmp -s "$stage/list" "$stage/expected" || die 'Not a node-only package.'
 tar -tvzf "$package" | awk 'substr($0,1,1)!="-" {bad=1} END {exit bad}' || die 'Package contains links or special files.'
-tar -xzf "$package" -C "$stage"
-[ "$(sed -n '1p' "$stage/manifest")" = 3x-ui-node ] || die 'Wrong package kind.'
-[ "$(sed -n '3p' "$stage/manifest")" = "$arch" ] || die 'Wrong architecture.'
-[ "$(sed -n '4p' "$stage/manifest")" = 26.7.28 ] || die 'Wrong Xray version.'
-chmod 755 "$stage/3x-ui-node" "$stage/xray"
-"$stage/3x-ui-node" version
-"$stage/xray" version | head -n 1
-mkdir -p "$base" /etc/3x-ui-node /var/lib/3x-ui-node
-release="$base/release-$expected"
-[ ! -e "$release" ] || die 'This release already exists; no change made.'
+mkdir "$tmp_release"
+tar -xzf "$package" -C "$tmp_release"
+[ "$(sed -n '1p' "$tmp_release/manifest")" = 3x-ui-node ] || die 'Wrong package kind.'
+[ "$(sed -n '3p' "$tmp_release/manifest")" = "$arch" ] || die 'Wrong architecture.'
+[ "$(sed -n '4p' "$tmp_release/manifest")" = 26.7.28 ] || die 'Wrong Xray version.'
+chown 0:0 "$tmp_release"/*
+chmod 755 "$tmp_release/3x-ui-node" "$tmp_release/xray"
+"$tmp_release/3x-ui-node" version
+"$tmp_release/xray" version | head -n 1
 old=''
 if [ "$action" = upgrade ]; then
     old=$(readlink "$base/current")
     rc-service 3x-ui-node stop
     [ ! -f /var/lib/3x-ui-node/state.json ] || cp -p /var/lib/3x-ui-node/state.json /var/lib/3x-ui-node/state.pre-upgrade.json
 fi
-mkdir "$release"
-cp "$stage/3x-ui-node" "$stage/xray" "$stage/service" "$stage/manifest" "$stage/LICENSE" "$stage/XRAY-LICENSE" "$release/"
+mv "$tmp_release" "$release"
+tmp_release=''
 ln -s "$release" "$base/current.next"
 mv -Tf "$base/current.next" "$base/current"
 ln -sf "$base/current/3x-ui-node" /usr/local/bin/3x-ui-node

@@ -2,7 +2,7 @@
 
 兼容基准：完整主面板 `ed6bc1d8`；Xray 固定 `26.7.28`。
 这是独立程序，不是完整面板的低内存启动参数，也不提供网页。
-**尚未完成全部资源及主面板端到端验收，不能声明 128MB 生产可用。**
+安装器和运行时按 128MiB 容器约束设计；仍需结合供应商限制、NAT 和持续运行数据做真实验收。
 
 ## 功能范围
 
@@ -20,12 +20,16 @@
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.8-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.9-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
-VPS 不安装编译器、Go、Node 或 Docker。将匹配架构的包和仓库中的安装脚本传到 VPS：
+VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-sh install.sh install ./3x-ui-node-0.1.8-linux-amd64.tar.gz TRUSTED_SHA256
+PKG=/tmp/3x-ui-node-0.1.9-linux-amd64.tar.gz
+DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
+tar -xzf "$PKG" -C "$DIR" install.sh
+cd "$DIR"
+sh ./install.sh install "$PKG" TRUSTED_SHA256
 3x-ui-node credentials
 3x-ui-node status
 ```
@@ -97,7 +101,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.8-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.9-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
