@@ -1,227 +1,207 @@
-[English](/README.md) | [فارسی](/README.fa_IR.md) | [العربية](/README.ar_EG.md) | [中文](/README.zh_CN.md) | [Español](/README.es_ES.md) | [Русский](/README.ru_RU.md) | [Türkçe](/README.tr_TR.md)
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./media/3x-ui-dark.png">
-    <img alt="3x-ui" src="./media/3x-ui-light.png">
+    <img alt="3x-ui 管理面板" src="./media/3x-ui-light.png">
   </picture>
 </p>
 
+<h1 align="center">3x-ui · 主面板与精简副节点</h1>
+
+<p align="center">在主面板集中管理入站与客户端，在副节点运行代理服务。</p>
+
 <p align="center">
-  <a href="https://github.com/MHSanaei/3x-ui/releases"><img src="https://img.shields.io/github/v/release/mhsanaei/3x-ui" alt="Release"></a>
-  <a href="https://github.com/MHSanaei/3x-ui/actions"><img src="https://img.shields.io/github/actions/workflow/status/mhsanaei/3x-ui/release.yml.svg" alt="Build"></a>
-  <a href="#"><img src="https://img.shields.io/github/go-mod/go-version/mhsanaei/3x-ui.svg" alt="GO Version"></a>
-  <a href="https://github.com/MHSanaei/3x-ui/releases/latest"><img src="https://img.shields.io/github/downloads/mhsanaei/3x-ui/total.svg" alt="Downloads"></a>
-  <a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img src="https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true" alt="License"></a>
-  <a href="https://pkg.go.dev/github.com/mhsanaei/3x-ui/v3"><img src="https://pkg.go.dev/badge/github.com/mhsanaei/3x-ui/v3.svg" alt="Go Reference"></a>
-  <a href="https://docs.sanaei.dev"><img src="https://img.shields.io/badge/docs-docs.sanaei.dev-22d3ee" alt="Documentation"></a>
+  <a href="https://github.com/opxqo/3x-ui/releases"><img src="https://img.shields.io/badge/发布版本-opxqo%2F3x--ui-blue" alt="发布版本"></a>
+  <a href="https://github.com/opxqo/3x-ui/actions/workflows/ci.yml"><img src="https://github.com/opxqo/3x-ui/actions/workflows/ci.yml/badge.svg" alt="持续集成"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/许可证-GPL--3.0-blue" alt="许可证"></a>
 </p>
 
-**3X-UI** is an advanced, open-source web control panel for managing [Xray-core](https://github.com/XTLS/Xray-core) servers. It provides a clean, multi-language interface for deploying, configuring, and monitoring a wide range of proxy and VPN protocols — from a single VPS to multi-node deployments.
+本仓库基于 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui) 持续开发，提供完整网页管理面板，以及面向低内存 Alpine 容器的独立精简副节点。两者使用不同的安装入口，请根据机器用途选择。
 
-Built as an enhanced fork of the original X-UI project, 3X-UI adds broader protocol support, improved stability, per-client traffic accounting, and many quality-of-life features.
+## 选择版本
 
-> [!IMPORTANT]
-> This project is intended for personal use only. Please do not use it for illegal purposes or in a production environment.
+| 对比项 | 完整主面板 | 精简副节点 |
+| --- | --- | --- |
+| 用途 | 网页管理、订阅与多节点管理 | 接收主面板下发并运行代理服务 |
+| 管理方式 | 网页、API、`x-ui` 菜单 | API、命令与菜单，无网页 |
+| 协议范围 | VLESS、VMess、Trojan、Shadowsocks 等多协议 | 仅 VLESS + TCP/RAW |
+| 安全层 | 按具体协议和传输配置 | 无加密或 REALITY，可选 Vision |
+| 数据存储 | SQLite 或 PostgreSQL | 本地配置与状态文件 |
+| 安装环境 | 多种 Linux 发行版，另有 Docker 部署 | Alpine + OpenRC，amd64 / arm64 |
+| 安装脚本 | `install.sh` | `install-node.sh` |
 
-## Features
+精简节点当前安装版本为 **0.1.14-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
 
-- **Multi-protocol inbounds** — VLESS, VMess, Trojan, Shadowsocks, WireGuard, AmneziaWG, Hysteria2, MTProto, HTTP, SOCKS (Mixed), Dokodemo-door / Tunnel, and TUN.
-- **Modern transports & security** — TCP (Raw), mKCP, WebSocket, gRPC, HTTPUpgrade, and XHTTP, secured with TLS, XTLS, and REALITY.
-- **AmneziaWG built in** — DPI-resistant WireGuard runs inside the panel on a userspace network stack, with no kernel module, DKMS, or extra packages to install.
-- **MTProto proxies** — per-client FakeTLS secrets, ad-tags, and quotas, applied live without dropping existing connections.
-- **Fallbacks** — serve multiple protocols on a single port (e.g. VLESS and Trojan on 443) using Xray's fallback support.
-- **Per-client management** — traffic quotas, expiry dates, IP limits with trusted-address exemptions, HWID device limits, scheduled renewal cycles, live online status, and one-click share links, QR codes, and subscriptions.
-- **Traffic statistics** — per inbound, per client, and per outbound, with reset controls.
-- **Multi-node support** — manage and scale across multiple servers from a single panel, including cloning inbounds onto other nodes.
-- **Outbound & routing** — WARP, NordVPN, PIA, custom routing rules, load balancers with balancer-to-balancer fallback, and outbound proxy chaining. Bundled geosite and geoip categories are browsable straight from the rule editor.
-- **Built-in subscription server** — raw, JSON, and Clash output, auto-selected from the client's User-Agent, plus [custom page templates](docs/custom-subscription-templates.md).
-- **Telegram bot** for remote monitoring and management.
-- **RESTful API** with scoped, optionally expiring tokens and an in-panel API reference.
-- **Installable panel (PWA)** — pin 3X-UI to a desktop or phone home screen.
-- **Flexible storage** — SQLite (default) or PostgreSQL.
-- **13 UI languages** with dark and light themes.
-- **Fail2ban integration** for enforcing per-client IP limits.
+## 快速安装
 
-## Screenshots
+### 完整主面板
 
-<details>
-<summary>Click to expand</summary>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./media/01-overview-dark.png">
-  <img alt="Overview" src="./media/01-overview-light.png">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./media/02-add-inbound-dark.png">
-  <img alt="Inbounds" src="./media/02-add-inbound-light.png">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./media/03-add-client-dark.png">
-  <img alt="Add client" src="./media/03-add-client-light.png">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./media/05-add-nodes-dark.png">
-  <img alt="Configs" src="./media/05-add-nodes-light.png">
-</picture>
-
-</details>
-
-## Quick Start
+在具备 Bash 和 curl 的 Linux 服务器上，以 root 身份执行：
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh)
 ```
 
-To install a specific version, append its tag (e.g. `v3.7.0`):
+安装完成后运行 `x-ui`，查看面板状态、管理登录信息、证书和服务。安装器会生成随机登录信息及访问路径，请保存安装结果。
 
-```bash
-bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh) v3.7.0
-```
-
-To install the rolling **dev** build (latest per-commit pre-release from `main`, not a stable release), pass `dev-latest`:
+需要验证主分支开发构建时，可以指定 `dev-latest`：
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh) dev-latest
 ```
 
-During installation a random username, password, and access path are generated. After installation, run `x-ui` to open the management menu, where you can start/stop the service, view or reset your login credentials, manage SSL certificates, and more.
+开发构建不代表稳定版本。其他指定版本以[本仓库发布页](https://github.com/opxqo/3x-ui/releases)实际提供的标签和安装包为准。
 
-Every release asset is published with a `.sha256` sum next to it. Both `install.sh` and the updater verify the archive against that sum and abort on a mismatch.
+### 精简副节点
 
-For full documentation — installation, configuration, operations, and the complete API reference — visit **[docs.sanaei.dev](https://docs.sanaei.dev)**.
-
-### Lightweight node
-
-For the experimental **Alpine/OpenRC lightweight node** (amd64/arm64), use the separate installer:
+在 Alpine/OpenRC 服务器上，以 root 身份执行：
 
 ```sh
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-This installs the pinned `0.1.14-node` release after SHA256 verification. See the [node guide](docs/node/README.md) for supported features, credentials, and upgrades.
+脚本自动识别架构，下载固定节点版本，验证内置 SHA256 摘要，然后安装并启动服务。使用 Alpine 自带的 `sh`，无需 Bash；安装包暂存在磁盘目录，结束后自动清理。
 
-### Unattended install
+安装完成后查看接入信息和运行状态：
 
-The installer also runs **non-interactively** for cloud-init.
-Set `XUI_NONINTERACTIVE=1` (or pipe with no TTY) and it installs end-to-end with
-zero prompts, generating random credentials and writing them to
-`/etc/x-ui/install-result.env`. See [`deploy/`](deploy/) for:
-
-- [Cloud-init user-data](deploy/cloud-init/) — unattended install on any cloud (Hetzner/AWS/DO/Vultr/GCP/Azure/Oracle)
-- [Hetzner Cloud notes](deploy/marketplace/hetzner/) — cloud-init deployment on Hetzner
-
-## Supported Platforms
-
-**Operating systems:** Ubuntu, Debian, Armbian, Fedora, CentOS, RHEL, AlmaLinux, Rocky Linux, Oracle Linux, Amazon Linux, Virtuozzo, Arch, Manjaro, Parch, openSUSE (Tumbleweed / Leap), Alpine, and Windows.
-
-**Architectures:** `amd64` · `386` · `arm64` (aarch64) · `armv7` · `armv6` · `armv5` · `s390x`.
-
-## Database Options
-
-3X-UI supports two backends, chosen during the install:
-
-- **SQLite** (default) — a single file at `/etc/x-ui/x-ui.db`. Zero setup, ideal for small and medium deployments.
-- **PostgreSQL** — recommended for high client counts or multi-node setups. The installer can install PostgreSQL locally for you, or accept a DSN to an existing server.
-
-At runtime the backend is selected via environment variables (the installer writes these to `/etc/default/x-ui` for you):
-
-```
-XUI_DB_TYPE=postgres
-XUI_DB_DSN=postgres://xui:password@127.0.0.1:5432/xui?sslmode=disable
+```sh
+3x-ui-node credentials
+3x-ui-node status
+3x-ui-node menu
 ```
 
-### Migrating an existing SQLite install to PostgreSQL
+在没有已有 `x-ui` 命令的专用副节点上，安装器还会创建 `x-ui` 菜单入口。
+
+## 将副节点接入主面板
+
+1. 在主面板添加节点，选择 **HTTPS**。
+2. 填写副节点的公网地址和管理端口，默认容器内端口为 **2053**。
+3. 填写 `credentials` 输出的**副节点 API Token**。
+4. 选择证书指纹固定，填写 **TLS SHA256** 指纹。
+5. 从主面板创建或下发受支持的 VLESS 入站与客户端。
+
+**副节点不需要主面板 API 令牌。** 从 `0.1.14-node` 起，已移除副节点定时拉取主面板的配置、后台任务、`sync` 命令及菜单 15–19，统一由主面板主动下发。
+
+如果服务器使用 NAT，主面板应填写管理端口的**公网映射端口**。VLESS 业务端口需要另行映射，分享链接也应使用公网地址与业务映射端口。**62789 是仅供本机使用的 Xray API 端口，不要映射到公网。**
+
+## 已有功能
+
+### 完整面板
+
+- **入站与客户端管理**：多协议入站、客户端增删改、流量配额、到期时间、在线状态和分享链接。
+- **多节点管理**：集中配置节点、克隆入站、同步客户端及查看节点状态。
+- **流量统计**：按入站、客户端和出站统计，支持清零。
+- **订阅与分享**：订阅服务、二维码，以及原始、JSON 和 Clash 等输出。
+- **传输与路由**：TCP/RAW、WebSocket、gRPC、HTTPUpgrade、XHTTP 等传输，以及出站和路由规则。
+- **访问限制与自动化**：IP 限制、设备限制、续期周期、Telegram 管理和 API 令牌。
+- **数据库与部署**：SQLite、PostgreSQL、Docker 和无人值守安装。
+
+具体协议和功能以面板实现及所使用的 Xray 版本为准；完整面板功能不能直接视为精简节点已支持的功能。
+
+### 精简副节点
+
+- 支持 VLESS + TCP/RAW，无加密或 REALITY，可选 Vision，使用直连出口。
+- 保留入站与客户端增删改、分享元数据、流量统计、配额、固定到期、首次使用计时和清零。
+- 客户端修改复用本机 gRPC；监听结构变化时串行重启 Xray。
+- 接收完整面板客户端数据时，忽略其他协议的 `password`、`auth`、`secret` 字段，避免 VLESS 同步被无关字段拒绝。
+- 对实际未实现的访问限制仍明确拒绝，不会静默假装支持。
+- 优化配置复制过程，减少临时分配；安装时避免重复解压大体积二进制，日志轮转总量约 4MiB。
+
+精简节点**不支持**其他协议、订阅服务、自动续期、IP/设备限制、嗅探、区域规则、通知及完整面板更新。主面板失联时继续使用最后生效的配置。
+
+## 节点升级与运行边界
+
+重新下载入口，并显式执行升级：
+
+```sh
+curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
+```
+
+已安装目标版本时直接返回；实际升级保留配置与状态，保留上一版本用于回退。不要使用主面板的完整面板更新按钮升级精简节点。
+
+| 项目 | 精简节点说明 |
+| --- | --- |
+| 默认管理端口 | HTTPS 2053 |
+| 配置 | `/etc/3x-ui-node/config.json` |
+| 状态与日志目录 | `/var/lib/3x-ui-node` |
+| 程序目录 | `/usr/local/lib/3x-ui-node` |
+| 重启服务 | `rc-service 3x-ui-node restart` |
+| 安装资源检查 | 有效内存至少 96MiB，剩余磁盘至少 300MiB |
+
+安装检查阈值不等于长期运行容量保证。实际占用取决于架构、连接数和供应商限制，应结合[资源与验收记录](docs/node/VALIDATION.md)及目标机器实测判断。
+
+流量默认每 5 秒采样，发生变化时保存；异常退出可能损失最近尚未保存的计数。跨节点总量依赖主面板回传，失联后不能保证跨节点实时额度一致。
+
+## Docker 与数据库
+
+完整面板可从本仓库构建并运行：
 
 ```bash
-x-ui migrate-db --dsn "postgres://xui:password@127.0.0.1:5432/xui?sslmode=disable"
-# then set XUI_DB_TYPE and XUI_DB_DSN in /etc/default/x-ui and restart:
-systemctl restart x-ui
+git clone https://github.com/opxqo/3x-ui.git
+cd 3x-ui
+docker compose up -d --build
 ```
 
-The source SQLite file is left untouched; remove it manually once you have verified the new backend.
+默认使用 SQLite，Compose 将数据库、证书及证书续期状态保存在宿主机目录。业务入站需在 `docker-compose.yml` 中补充相应端口映射。
 
-### Docker
-
-The default `docker compose up -d` keeps using SQLite. To run with the bundled PostgreSQL service, uncomment the two `XUI_DB_*` env lines in `docker-compose.yml` and start with the profile:
+使用 PostgreSQL 时，先配置 Compose 文件中的 `XUI_DB_TYPE`、`XUI_DB_DSN` 及数据库凭据，再启动：
 
 ```bash
-docker compose --profile postgres up -d
+docker compose --profile postgres up -d --build
 ```
 
-The image bundles Fail2ban (enabled by default) to enforce per-client **IP limits**. Fail2ban bans offenders with `iptables`, which requires the `NET_ADMIN` capability. `docker-compose.yml` already grants it via `cap_add`; if you start the container with `docker run` instead, add the capabilities yourself, otherwise bans are logged but never applied:
+Linux 脚本安装默认 SQLite 数据库路径为 `/etc/x-ui/x-ui.db`；PostgreSQL 连接通过 `XUI_DB_TYPE=postgres` 和 `XUI_DB_DSN` 配置。精简节点不使用这套数据库配置。
 
-```bash
-docker run -d --cap-add=NET_ADMIN --cap-add=NET_RAW ... ghcr.io/mhsanaei/3x-ui
+## 文档与开发
+
+| 文档 | 内容 |
+| --- | --- |
+| [精简节点说明](docs/node/README.md) | 构建、安装、功能范围、NAT、命令与升级 |
+| [节点资源与验收记录](docs/node/VALIDATION.md) | 资源测量、验证方法及已知限制 |
+| [自动化部署](deploy/README.md) | 无人值守安装与云端部署 |
+| [API 读取工具](tools/panel-api-reader/README.md) | 只读检查面板 API 数据与客户端字段 |
+| [贡献指南](CONTRIBUTING.md) | 开发与贡献约定 |
+
+节点开发常用命令：
+
+```sh
+sh scripts/node/build.sh
+go test -race ./internal/node ./cmd/3x-ui-node
+go test -race -tags mastercontract ./internal/node
 ```
 
-## Environment Variables
+构建要求以仓库 `go.mod` 和构建脚本为准。问题反馈请附版本、架构、复现步骤和脱敏日志，通过[本仓库问题页](https://github.com/opxqo/3x-ui/issues)提交。
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `XUI_DB_TYPE` | Database backend: `sqlite` or `postgres` | `sqlite` |
-| `XUI_DB_DSN` | PostgreSQL connection string (when `XUI_DB_TYPE=postgres`) | — |
-| `XUI_DB_FOLDER` | Directory for the SQLite database file | `/etc/x-ui` |
-| `XUI_DB_MAX_OPEN_CONNS` | Maximum open connections (PostgreSQL pool) | — |
-| `XUI_DB_MAX_IDLE_CONNS` | Maximum idle connections (PostgreSQL pool) | — |
-| `XUI_INIT_WEB_BASE_PATH` | The initial URI path for the web panel | `/` |
-| `XUI_ENABLE_FAIL2BAN` | Enable Fail2ban-based IP-limit enforcement | `true` |
-| `XUI_LOG_LEVEL` | Log verbosity (`debug`, `info`, `warning`, `error`) | `info` |
-| `XUI_DEBUG` | Enable debug mode | `false` |
-| `XUI_TUNNEL_HEALTH_MONITOR` | Enable the tunnel health monitor (probes a URL and restarts xray after repeated failures; a restart drops all clients) | `false` |
-| `XUI_TUNNEL_HEALTH_PROXY` | Proxy the probe is sent through; point it at a local xray inbound so the probe tests the tunnel (e.g. `socks5://127.0.0.1:1080`). Empty means the probe only checks host connectivity | — |
-| `XUI_TUNNEL_HEALTH_URL` | URL probed for tunnel health | `https://www.cloudflare.com/cdn-cgi/trace` |
-| `XUI_TUNNEL_HEALTH_INTERVAL` | Interval between probes | `30s` |
-| `XUI_TUNNEL_HEALTH_TIMEOUT` | Per-probe timeout | `10s` |
-| `XUI_TUNNEL_HEALTH_FAILURES` | Consecutive failures before a restart is triggered | `3` |
-| `XUI_TUNNEL_HEALTH_COOLDOWN` | Minimum delay between consecutive restarts | `5m` |
-| `NODE_TOKEN_ENCRYPTION` | Encryption at rest for node API tokens: `off`, `migration`, or `required` (note: no `XUI_` prefix) | `off` |
-| `XUI_NODE_TOKEN_KEY_FILE` | JSON keyring (mode `0600`) holding the active key id and its base64 32-byte keys | `/etc/x-ui/node_token_key.json` |
-| `XUI_NODE_TOKEN_KEY` | A single base64 32-byte key, used only when the key file cannot be loaded | — |
+## 面板预览
 
-The complete list is on the [environment variables reference](https://docs.sanaei.dev/docs/reference/env-vars).
+<details>
+<summary>展开查看面板截图</summary>
 
-## Supported Languages
+截图用于展示完整面板界面，精简节点不提供网页。
 
-The panel UI is available in 13 languages:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./media/01-overview-dark.png">
+  <img alt="面板概览" src="./media/01-overview-light.png">
+</picture>
 
-English · فارسی · العربية · 中文（简体） · 中文（繁體） · Español · Русский · Українська · Türkçe · Tiếng Việt · 日本語 · Bahasa Indonesia · Português (Brasil)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./media/02-add-inbound-dark.png">
+  <img alt="添加入站" src="./media/02-add-inbound-light.png">
+</picture>
 
-## Contributing
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./media/03-add-client-dark.png">
+  <img alt="添加客户端" src="./media/03-add-client-light.png">
+</picture>
 
-Contributions are welcome. Please read the [Contributing Guide](/CONTRIBUTING.md) before opening an issue or pull request.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./media/05-add-nodes-dark.png">
+  <img alt="节点配置" src="./media/05-add-nodes-light.png">
+</picture>
 
-## A Special Thanks to
+</details>
 
-- [alireza0](https://github.com/alireza0/)
+## 开源与致谢
 
-## Acknowledgment
+本仓库是 3x-ui 的衍生开发版本，遵循 [GPL-3.0 许可证](LICENSE)。感谢 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)、[alireza0](https://github.com/alireza0) 与 [Xray-core](https://github.com/XTLS/Xray-core) 的开发者和贡献者。
 
-- [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) (License: **GPL-3.0**): _Enhanced v2ray/xray and v2ray/xray-clients routing rules with built-in Iranian domains and a focus on security and adblocking._
-- [Russia v2ray rules](https://github.com/runetfreedom/russia-v2ray-rules-dat) (License: **GPL-3.0**): _This repository contains automatically updated V2Ray routing rules based on data on blocked domains and addresses in Russia._
-
-## Community Tools
-
-Tools and integrations built by the community around 3x-ui.
-
-- [terraform-provider-3x-ui](https://github.com/batonogov/terraform-provider-threexui) (License: **MIT**): _Manage inbounds, clients, panel settings, and Xray configuration as code with Terraform / OpenTofu._
-
-## Support project
-
-**If this project is helpful to you, you may wish to give it a**:star2:
-
-<a href="https://www.buymeacoffee.com/MHSanaei" target="_blank">
-<img src="./media/default-yellow.png" alt="Buy Me A Coffee" style="height: 70px !important;width: 277px !important;" >
-</a>
-
-</br>
-<a href="https://nowpayments.io/donation/hsanaei" target="_blank" rel="noreferrer noopener">
-   <img src="./media/donation-button-black.svg" alt="Crypto donation button by NOWPayments">
-</a>
-
-## Stargazers over Time
-
-[![Stargazers over time](https://starchart.cc/MHSanaei/3x-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/3x-ui)
+完整面板所使用的规则数据包括 [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) 和 [Russia v2ray rules](https://github.com/runetfreedom/russia-v2ray-rules-dat)，均遵循各自的 GPL-3.0 许可；精简节点包不附带 GeoIP/GeoSite 数据。第三方组件许可证随相应源码或发布包保留。
