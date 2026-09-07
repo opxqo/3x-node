@@ -90,7 +90,9 @@ if [ "$action" = install ]; then
 fi
 ready() {
     tries=0
-    while [ "$tries" -lt 10 ]; do
+    # Xray may need several seconds to start on a 128MiB container. OpenRC
+    # reports the background process as started before the HTTPS API is ready.
+    while [ "$tries" -lt 30 ]; do
         if 3x-ui-node status >/dev/null 2>&1; then return 0; fi
         tries=$((tries + 1))
         sleep 1
@@ -103,6 +105,7 @@ if ! 3x-ui-node check || ! rc-service 3x-ui-node start || ! ready; then
         ln -s "$old" "$base/current.next"
         mv -Tf "$base/current.next" "$base/current"
         cp "$old/service" /etc/init.d/3x-ui-node
+        chmod 755 /etc/init.d/3x-ui-node
         rc-service 3x-ui-node start || true
     fi
     die 'Activation failed; previous binary restored if available. Inspect node.log.'
