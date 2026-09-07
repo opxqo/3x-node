@@ -14,23 +14,46 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
+const (
+	DefaultMasterSyncInterval = 60
+	MinMasterSyncInterval     = 30
+	MaxMasterSyncInterval     = 3600
+)
+
+type MasterSyncMapping struct {
+	ID              string `json:"id"`
+	MasterInboundID int    `json:"masterInboundId"`
+	LocalInboundID  int    `json:"localInboundId"`
+}
+
+type MasterSyncConfig struct {
+	Enabled         bool                `json:"enabled"`
+	BaseURL         string              `json:"baseURL"`
+	TokenFile       string              `json:"tokenFile"`
+	CertSHA256      string              `json:"certSHA256"`
+	IntervalSeconds int                 `json:"intervalSeconds"`
+	Mappings        []MasterSyncMapping `json:"mappings,omitempty"`
+}
+
 type Config struct {
-	Listen             string `json:"listen"`
-	BasePath           string `json:"basePath"`
-	Token              string `json:"token"`
-	CertFile           string `json:"certFile"`
-	KeyFile            string `json:"keyFile"`
-	StateFile          string `json:"stateFile"`
-	XrayBinary         string `json:"xrayBinary"`
-	APIPort            int    `json:"xrayApiPort"`
-	DefaultClientUUID  string `json:"defaultClientUUID,omitempty"`
-	DefaultClientEmail string `json:"defaultClientEmail,omitempty"`
+	Listen             string           `json:"listen"`
+	BasePath           string           `json:"basePath"`
+	Token              string           `json:"token"`
+	CertFile           string           `json:"certFile"`
+	KeyFile            string           `json:"keyFile"`
+	StateFile          string           `json:"stateFile"`
+	XrayBinary         string           `json:"xrayBinary"`
+	APIPort            int              `json:"xrayApiPort"`
+	DefaultClientUUID  string           `json:"defaultClientUUID,omitempty"`
+	DefaultClientEmail string           `json:"defaultClientEmail,omitempty"`
+	MasterSync         MasterSyncConfig `json:"masterSync,omitempty"`
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -73,7 +96,51 @@ func LoadConfig(path string) (Config, error) {
 	if err := ValidateDefaultClient(c.DefaultClientUUID, c.DefaultClientEmail); err != nil {
 		return c, err
 	}
+	if err := ValidateMasterSync(c.MasterSync); err != nil {
+		return c, err
+	}
 	return c, nil
+}
+
+func ValidateMasterSync(s MasterSyncConfig) error {
+	if !s.Enabled {
+		return nil
+	}
+	if s.BaseURL == "" {
+		return errors.New("master sync baseURL is required")
+	}
+	u, err := url.Parse(s.BaseURL)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return errors.New("master sync baseURL must be an https URL without credentials, query, or fragment")
+	}
+	if s.TokenFile == "" || !filepath.IsAbs(s.TokenFile) {
+		return errors.New("master sync tokenFile must be an absolute path")
+	}
+	if s.IntervalSeconds == 0 {
+		s.IntervalSeconds = DefaultMasterSyncInterval
+	}
+	if s.IntervalSeconds < MinMasterSyncInterval || s.IntervalSeconds > MaxMasterSyncInterval {
+		return fmt.Errorf("master sync intervalSeconds must be %d..%d", MinMasterSyncInterval, MaxMasterSyncInterval)
+	}
+	if err := ValidateSHA256Fingerprint(s.CertSHA256); err != nil {
+		return fmt.Errorf("master sync certSHA256: %w", err)
+	}
+	if len(s.Mappings) == 0 || len(s.Mappings) > MaxInbounds {
+		return fmt.Errorf("master sync mappings must contain 1..%d entries", MaxInbounds)
+	}
+	seen := map[string]bool{}
+	masters := map[int]bool{}
+	locals := map[int]bool{}
+	for _, m := range s.Mappings {
+		if m.ID == "" || strings.ContainsAny(m.ID, "/\\\x00") || seen[m.ID] {
+			return errors.New("master sync mapping IDs must be non-empty and unique")
+		}
+		if m.MasterInboundID < 1 || m.LocalInboundID < 1 || masters[m.MasterInboundID] || locals[m.LocalInboundID] {
+			return errors.New("master sync inbound IDs must be positive and unique")
+		}
+		seen[m.ID], masters[m.MasterInboundID], locals[m.LocalInboundID] = true, true, true
+	}
+	return nil
 }
 
 // DefaultClient returns the leaf-only compatibility client injected into empty

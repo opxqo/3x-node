@@ -83,6 +83,8 @@ func run() error {
 		return nil
 	case "default-client":
 		return defaultClient(*path, c, f.Args(), os.Stdout)
+	case "sync":
+		return syncCommand(c, f.Args(), os.Stdout)
 	case "check":
 		if _, err = tls.LoadX509KeyPair(c.CertFile, c.KeyFile); err != nil {
 			return err
@@ -105,7 +107,7 @@ func run() error {
 		return runMenu(*path, c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, version")
+		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, sync, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)
