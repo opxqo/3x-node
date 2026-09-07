@@ -89,6 +89,53 @@ func TestMasterSyncPreviewApplyAndIdempotence(t *testing.T) {
 	}
 }
 
+func TestMasterSyncAcceptsPanelClientMetadata(t *testing.T) {
+	n, _ := testNode(t)
+	client := testClient("panel-user", "00000000-0000-4000-8000-000000000004")
+	// The full panel may include traffic and reset metadata in the client
+	// object even though those values are not part of the leaf Xray client.
+	client.Set("up", int64(123))
+	client.Set("down", int64(456))
+	client.Set("total", int64(579))
+	client.Set("lastOnline", int64(1700000000))
+	client.Set("resetCount", 2)
+	client.Set("lastSubFetch", int64(1700000000))
+	client.Set("trafficReset", "never")
+	client.Set("trafficResetDay", 0)
+
+	remote := []Inbound{masterSyncRemoteInbound([]Client{client})}
+	preview, err := n.PreviewMasterSync(remote, masterSyncMappings())
+	if err != nil {
+		t.Fatalf("panel client metadata blocked sync: %v", err)
+	}
+	if got := preview.Mappings[0].Added; got != 1 {
+		t.Fatalf("added clients = %d, want 1", got)
+	}
+	if _, err = n.ApplyMasterSync(remote, masterSyncMappings()); err != nil {
+		t.Fatalf("apply panel client metadata: %v", err)
+	}
+
+	got := clientByEmail(t, n.Inbounds()[0], "panel-user")
+	for _, key := range []string{"up", "down", "total", "lastOnline", "resetCount", "lastSubFetch", "trafficResetDay"} {
+		if _, ok := got[key]; ok {
+			t.Fatalf("leaf client retained non-runtime metadata %q: %s", key, got[key])
+		}
+	}
+	if got.Text("trafficReset") != "never" {
+		t.Fatalf("trafficReset = %q, want never", got.Text("trafficReset"))
+	}
+}
+
+func TestMasterSyncRejectsEnabledUnsupportedClientFeature(t *testing.T) {
+	n, _ := testNode(t)
+	client := testClient("limited-user", "00000000-0000-4000-8000-000000000005")
+	client.Set("limitIp", 1)
+	_, err := n.PreviewMasterSync([]Inbound{masterSyncRemoteInbound([]Client{client})}, masterSyncMappings())
+	if err == nil || !strings.Contains(err.Error(), "unsupported client feature: limitIp") {
+		t.Fatalf("unsupported client feature was not reported precisely: %v", err)
+	}
+}
+
 func TestMasterSyncNeverDeletesMissingRemoteClients(t *testing.T) {
 	n, _ := testNode(t)
 	remote := []Inbound{masterSyncRemoteInbound([]Client{testClient("alice", "00000000-0000-4000-8000-000000000001")})}

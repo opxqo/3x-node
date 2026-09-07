@@ -35,6 +35,63 @@ type MasterSyncPreview struct {
 	Mappings []MasterSyncMappingPreview `json:"mappings"`
 }
 
+var masterClientSupportedFields = map[string]struct{}{
+	"id": {}, "email": {}, "enable": {}, "flow": {}, "security": {},
+	"totalGB": {}, "expiryTime": {}, "subId": {}, "tgId": {}, "group": {},
+	"comment": {}, "created_at": {}, "updated_at": {}, "trafficReset": {},
+	"trafficResetDay": {},
+}
+
+// These fields may be present in a full-panel client payload, but are either
+// traffic snapshots or bookkeeping values. They are not part of the leaf
+// Xray client and must never overwrite the leaf's own counters.
+var masterClientMetadataFields = map[string]struct{}{
+	"up": {}, "down": {}, "total": {}, "lastOnline": {},
+	"resetCount": {}, "lastSubFetch": {}, "clientStats": {},
+}
+
+var masterClientUnsupportedFields = map[string]struct{}{
+	"limitIp": {}, "reset": {}, "resetDay": {}, "resetMax": {}, "hwidLimit": {},
+	"deviceLimit": {}, "reverse": {}, "auth": {}, "privateKey": {}, "publicKey": {},
+	"allowedIPs": {}, "allowedIPsByInbound": {}, "preSharedKey": {}, "keepAlive": {},
+	"forwardedPorts": {}, "secret": {}, "adTag": {},
+}
+
+// normalizeMasterClient converts the full-panel client shape into the
+// leaf-supported client shape. Zero-valued unsupported options are harmless
+// defaults emitted by the full panel and are dropped. Non-zero unsupported
+// features remain hard conflicts: silently dropping a real access limit or
+// reset policy would change the client's meaning.
+func normalizeMasterClient(source Client) (Client, error) {
+	normalized := Client{}
+	for name, value := range source {
+		if _, ok := masterClientSupportedFields[name]; ok {
+			// trafficResetDay=0 is emitted by some panel versions together with
+			// trafficReset=never; 0 means the default, not a monthly day.
+			if name == "trafficResetDay" && source.Text("trafficReset") != "" && source.Text("trafficReset") != "never" {
+				normalized[name] = append(json.RawMessage(nil), value...)
+				continue
+			}
+			if name == "trafficResetDay" && strings.TrimSpace(string(value)) == "0" && (source.Text("trafficReset") == "" || source.Text("trafficReset") == "never") {
+				continue
+			}
+			normalized[name] = append(json.RawMessage(nil), value...)
+			continue
+		}
+		if _, ok := masterClientMetadataFields[name]; ok || emptyJSON(value) {
+			continue
+		}
+		if _, ok := masterClientUnsupportedFields[name]; ok {
+			return nil, fmt.Errorf("unsupported client feature: %s", name)
+		}
+		return nil, fmt.Errorf("unsupported client setting %s", name)
+	}
+	if err := validateClient(normalized); err != nil {
+		return nil, err
+	}
+	return normalized, nil
+}
+
 func validateMasterSyncMappings(mappings []MasterSyncMapping) error {
 	if len(mappings) == 0 || len(mappings) > MaxInbounds {
 		return fmt.Errorf("master sync mappings must contain 1..%d entries", MaxInbounds)
@@ -186,10 +243,12 @@ func buildMasterSyncPlan(state *State, remote []Inbound, mappings []MasterSyncMa
 			localClients, _ = local.Clients()
 		}
 		for _, remoteClient := range remoteClients {
-			if err := validateClient(remoteClient); err != nil {
-				row.Conflict = append(row.Conflict, "unsupported master client fields")
+			normalized, err := normalizeMasterClient(remoteClient)
+			if err != nil {
+				row.Conflict = append(row.Conflict, fmt.Sprintf("unsupported master client fields: %v", err))
 				continue
 			}
+			remoteClient = normalized
 			email, uuid := remoteClient.Text("email"), remoteClient.Text("id")
 			if seenEmail[email] || seenUUID[uuid] {
 				row.Conflict = append(row.Conflict, "duplicate client identity in master inbound")
@@ -255,7 +314,11 @@ func applyMasterSync(state *State, remote []Inbound, mappings []MasterSyncMappin
 			owned = &state.MasterSync[len(state.MasterSync)-1]
 		}
 		owned.MasterInboundID, owned.LocalInboundID = mapping.MasterInboundID, mapping.LocalInboundID
-		for _, remoteClient := range sourceClients {
+		for _, sourceClient := range sourceClients {
+			remoteClient, err := normalizeMasterClient(sourceClient)
+			if err != nil {
+				return MasterSyncPreview{}, fmt.Errorf("master sync client normalization failed: %w", err)
+			}
 			idx := clientIndexByEmail(localClients, remoteClient.Text("email"))
 			if idx >= 0 {
 				localClients[idx] = cloneClient(remoteClient)
