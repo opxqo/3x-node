@@ -33,7 +33,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 入口自动识别架构，下载 `v0.1.20-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
-已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
+已经安装时首次安装命令会拒绝执行；升级请显式传入 `upgrade`：
+
+```sh
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
+```
+
 已经是目标版本则直接返回，不重启服务。后续发布节点版时需同步更新入口中的版本及两个架构摘要。
 
 安装完成后执行 `3x-ui-node credentials`，将节点 Token 和 TLS 指纹填入主面板。

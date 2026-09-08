@@ -26,7 +26,7 @@
 | 安装环境 | 多种 Linux 发行版，另有 Docker 部署 | Alpine + OpenRC，amd64 / arm64 |
 | 安装脚本 | `install.sh` | `install-node.sh` |
 
-精简节点当前安装版本为 **0.1.14-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
+精简节点当前安装版本为 **0.1.20-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
 
 ## 快速安装
 
@@ -107,10 +107,10 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 
 ## 节点升级与运行边界
 
-重新下载入口，并显式执行升级：
+已有精简节点时，重新下载入口，并显式执行升级：
 
 ```sh
-curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
 ```
 
 已安装目标版本时直接返回；实际升级保留配置与状态，保留上一版本用于回退。不要使用主面板的完整面板更新按钮升级精简节点。
