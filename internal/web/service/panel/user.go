@@ -6,12 +6,12 @@ import (
 	"github.com/xlzd/gotp"
 	"gorm.io/gorm"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/database"
-	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/crypto"
-	ldaputil "github.com/mhsanaei/3x-ui/v3/internal/util/ldap"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
+	"github.com/opxqo/3x-node/v3/internal/database"
+	"github.com/opxqo/3x-node/v3/internal/database/model"
+	"github.com/opxqo/3x-node/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/util/crypto"
+	ldaputil "github.com/opxqo/3x-node/v3/internal/util/ldap"
+	"github.com/opxqo/3x-node/v3/internal/web/service"
 )
 
 // UserService provides business logic for user management and authentication.

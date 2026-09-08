@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/outbound"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/websocket"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"github.com/opxqo/3x-node/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/web/service"
+	"github.com/opxqo/3x-node/v3/internal/web/service/outbound"
+	"github.com/opxqo/3x-node/v3/internal/web/websocket"
+	"github.com/opxqo/3x-node/v3/internal/xray"
 
 	"github.com/valyala/fasthttp"
 )

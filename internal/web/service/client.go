@@ -14,8 +14,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"github.com/opxqo/3x-node/v3/internal/database/model"
+	"github.com/opxqo/3x-node/v3/internal/xray"
 )
 
 type ClientWithAttachments struct {

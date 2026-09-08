@@ -1,6 +1,6 @@
-# 3x-ui API reader
+# 3x-node API reader
 
-This is a standalone, read-only Python program for inspecting a 3x-ui panel.
+This is a standalone, read-only Python program for inspecting a 3x-node panel.
 It focuses on client payloads and reports the exact field names returned by the
 panel, which is useful when diagnosing panel-to-node compatibility issues.
 

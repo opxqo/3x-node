@@ -1,6 +1,6 @@
-# 3x-ui via cloud-init
+# 3x-node via cloud-init
 
-A single [`cloud-init.yaml`](cloud-init.yaml) user-data file that installs 3x-ui
+A single [`cloud-init.yaml`](cloud-init.yaml) user-data file that installs 3x-node
 non-interactively on a fresh Ubuntu/Debian VM and generates **unique random
 credentials per instance**. It works on any cloud-init platform.
 

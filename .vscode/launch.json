@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run 3x-ui (Debug)",
+      "name": "Run 3x-node (Debug)",
       "type": "go",
       "request": "launch",
       "mode": "auto",
@@ -18,7 +18,7 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Run 3x-ui (Postgres)",
+      "name": "Run 3x-node (Postgres)",
       "type": "go",
       "request": "launch",
       "mode": "auto",

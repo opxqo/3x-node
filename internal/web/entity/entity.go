@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
 )
 
 type Msg struct {

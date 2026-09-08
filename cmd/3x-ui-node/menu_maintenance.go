@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	nodeInstallScriptURL = "https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh"
+	nodeInstallScriptURL = "https://raw.githubusercontent.com/opxqo/3x-node/main/install-node.sh"
 	nodeBaseDir          = "/usr/local/lib/3x-ui-node"
 	nodeConfigDir        = "/etc/3x-ui-node"
 	nodeDataDir          = "/var/lib/3x-ui-node"

@@ -12,7 +12,7 @@ import (
 func TestServePWAAssets(t *testing.T) {
 	oldDistFS := distFS
 	distFS = fstest.MapFS{
-		"dist/manifest.webmanifest": &fstest.MapFile{Data: []byte(`{"name":"3x-ui"}`)},
+		"dist/manifest.webmanifest": &fstest.MapFile{Data: []byte(`{"name":"3x-node"}`)},
 		"dist/pwa-register.js":      &fstest.MapFile{Data: []byte("register")},
 		"dist/service-worker.js":    &fstest.MapFile{Data: []byte("worker")},
 		"dist/icons/3x-ui-192.png":  &fstest.MapFile{Data: []byte("icon-192")},
@@ -26,7 +26,7 @@ func TestServePWAAssets(t *testing.T) {
 		contentType string
 		body        string
 	}{
-		{name: "manifest", handler: ServePWAManifest, contentType: "application/manifest+json; charset=utf-8", body: `{"name":"3x-ui"}`},
+		{name: "manifest", handler: ServePWAManifest, contentType: "application/manifest+json; charset=utf-8", body: `{"name":"3x-node"}`},
 		{name: "registration", handler: ServePWARegister, contentType: "application/javascript; charset=utf-8", body: "register"},
 		{name: "worker", handler: ServePWAServiceWorker, contentType: "application/javascript; charset=utf-8", body: "worker"},
 	}

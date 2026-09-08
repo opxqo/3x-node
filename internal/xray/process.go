@@ -17,9 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/config"
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/config"
+	"github.com/opxqo/3x-node/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
 )
 
 // GetBinaryName returns the Xray binary filename for the current OS and architecture.

@@ -2,13 +2,13 @@
   <img alt="3X-NODE" src="./media/3x-node-logo.png" width="760">
 </p>
 
-<h1 align="center">3x-ui · 主面板与精简副节点</h1>
+<h1 align="center">3x-node · 主面板与精简副节点</h1>
 
 <p align="center">在主面板集中管理入站与客户端，在副节点运行代理服务。</p>
 
 <p align="center">
-  <a href="https://github.com/opxqo/3x-ui/releases"><img src="https://img.shields.io/badge/发布版本-opxqo%2F3x--ui-blue" alt="发布版本"></a>
-  <a href="https://github.com/opxqo/3x-ui/actions/workflows/ci.yml"><img src="https://github.com/opxqo/3x-ui/actions/workflows/ci.yml/badge.svg" alt="持续集成"></a>
+  <a href="https://github.com/opxqo/3x-node/releases"><img src="https://img.shields.io/badge/发布版本-opxqo%2F3x--node-blue" alt="发布版本"></a>
+  <a href="https://github.com/opxqo/3x-node/actions/workflows/ci.yml"><img src="https://github.com/opxqo/3x-node/actions/workflows/ci.yml/badge.svg" alt="持续集成"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/许可证-GPL--3.0-blue" alt="许可证"></a>
 </p>
 
@@ -26,7 +26,7 @@
 | 安装环境 | 多种 Linux 发行版，另有 Docker 部署 | Alpine + OpenRC，amd64 / arm64 |
 | 安装脚本 | `install.sh` | `install-node.sh` |
 
-精简节点当前安装版本为 **0.1.23-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
+精简节点当前安装版本为 **0.1.24-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
 
 ## 快速安装
 
@@ -35,7 +35,7 @@
 在具备 Bash 和 curl 的 Linux 服务器上，以 root 身份执行：
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-node/main/install.sh)
 ```
 
 安装完成后运行 `x-ui`，查看面板状态、管理登录信息、证书和服务。安装器会生成随机登录信息及访问路径，请保存安装结果。
@@ -43,17 +43,17 @@ bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh)
 需要验证主分支开发构建时，可以指定 `dev-latest`：
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-ui/main/install.sh) dev-latest
+bash <(curl -Ls https://raw.githubusercontent.com/opxqo/3x-node/main/install.sh) dev-latest
 ```
 
-开发构建不代表稳定版本。其他指定版本以[本仓库发布页](https://github.com/opxqo/3x-ui/releases)实际提供的标签和安装包为准。
+开发构建不代表稳定版本。其他指定版本以[本仓库发布页](https://github.com/opxqo/3x-node/releases)实际提供的标签和安装包为准。
 
 ### 精简副节点
 
 在 Alpine/OpenRC 服务器上，以 root 身份执行：
 
 ```sh
-apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-node/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
 脚本自动识别架构，下载固定节点版本，验证内置 SHA256 摘要，然后安装并启动服务。使用 Alpine 自带的 `sh`，无需 Bash；安装包暂存在磁盘目录，结束后自动清理。
@@ -110,7 +110,7 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 已有精简节点时，重新下载入口，并显式执行升级：
 
 ```sh
-apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
+apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-node/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh upgrade
 ```
 
 已安装目标版本时直接返回；实际升级保留配置与状态，保留上一版本用于回退。不要使用主面板的完整面板更新按钮升级精简节点。
@@ -133,8 +133,8 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 完整面板可从本仓库构建并运行：
 
 ```bash
-git clone https://github.com/opxqo/3x-ui.git
-cd 3x-ui
+git clone https://github.com/opxqo/3x-node.git
+cd 3x-node
 docker compose up -d --build
 ```
 
@@ -166,7 +166,7 @@ go test -race ./internal/node ./cmd/3x-ui-node
 go test -race -tags mastercontract ./internal/node
 ```
 
-构建要求以仓库 `go.mod` 和构建脚本为准。问题反馈请附版本、架构、复现步骤和脱敏日志，通过[本仓库问题页](https://github.com/opxqo/3x-ui/issues)提交。
+构建要求以仓库 `go.mod` 和构建脚本为准。问题反馈请附版本、架构、复现步骤和脱敏日志，通过[本仓库问题页](https://github.com/opxqo/3x-node/issues)提交。
 
 ## 面板预览
 
@@ -199,6 +199,6 @@ go test -race -tags mastercontract ./internal/node
 
 ## 开源与致谢
 
-本仓库是 3x-ui 的衍生开发版本，遵循 [GPL-3.0 许可证](LICENSE)。感谢 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)、[alireza0](https://github.com/alireza0) 与 [Xray-core](https://github.com/XTLS/Xray-core) 的开发者和贡献者。
+本仓库是 3x-node 的衍生开发版本，遵循 [GPL-3.0 许可证](LICENSE)。感谢 [MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)、[alireza0](https://github.com/alireza0) 与 [Xray-core](https://github.com/XTLS/Xray-core) 的开发者和贡献者。
 
 完整面板所使用的规则数据包括 [Iran v2ray rules](https://github.com/chocolate4u/Iran-v2ray-rules) 和 [Russia v2ray rules](https://github.com/runetfreedom/russia-v2ray-rules-dat)，均遵循各自的 GPL-3.0 许可；精简节点包不附带 GeoIP/GeoSite 数据。第三方组件许可证随相应源码或发布包保留。

@@ -9,10 +9,10 @@ case "$action" in install|upgrade) ;; *) die 'Usage: sh install-node.sh [install
 [ "$(id -u)" = 0 ] || die 'Run as root.'
 [ -f /etc/alpine-release ] && command -v rc-service >/dev/null || die 'Alpine Linux with OpenRC is required.'
 # Pin the node release: the repository also publishes full-panel releases.
-version=0.1.23
+version=0.1.24
 case "$(uname -m)" in
-    x86_64) arch=amd64; expected=2800b9d6b5b63e1802c0b2b0daebe04b948b6d284c50598f9b5a7430f2bf37d4;;
-    aarch64) arch=arm64; expected=2276a3a3985e10a18d4e397977cc7cb0b0fc57c449f87bfb7fc2e804a2d26d04;;
+    x86_64) arch=amd64; expected=b1cdc989c99284f708783970d336b471d0e3c9c155b80412da2cebc2cefe0cfa;;
+    aarch64) arch=arm64; expected=69853213f335cb09e8d715b8203a6cf0e4ca5cc7ed8f3ed7f6427542b3de8d79;;
     *) die 'Only amd64 and arm64 are supported.';;
 esac
 base=/usr/local/lib/3x-ui-node
@@ -35,7 +35,7 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 asset="3x-ui-node-$version-linux-$arch.tar.gz"
 package="$work/$asset"
-url="https://github.com/opxqo/3x-ui/releases/download/v$version-node/$asset"
+url="https://github.com/opxqo/3x-node/releases/download/v$version-node/$asset"
 echo "Downloading 3x-ui-node $version ($arch)..."
 curl --fail --location --show-error --retry 3 --connect-timeout 15 --max-time 600 \
     --proto '=https' --proto-redir '=https' --output "$package" "$url"

@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/node"
+	"github.com/opxqo/3x-node/v3/internal/node"
 	"golang.org/x/net/proxy"
 )
 

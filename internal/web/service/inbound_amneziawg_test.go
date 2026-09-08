@@ -9,11 +9,11 @@ import (
 
 	"github.com/op/go-logging"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/amneziawg"
-	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
-	"github.com/mhsanaei/3x-ui/v3/internal/database"
-	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/amneziawg"
+	"github.com/opxqo/3x-node/v3/internal/amneziawgnet"
+	"github.com/opxqo/3x-node/v3/internal/database"
+	"github.com/opxqo/3x-node/v3/internal/database/model"
+	"github.com/opxqo/3x-node/v3/internal/logger"
 )
 
 func TestCheckForwardedPortsConflict_EmptySpecNoConflict(t *testing.T) {

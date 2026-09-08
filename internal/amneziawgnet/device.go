@@ -9,8 +9,8 @@ import (
 	"github.com/amnezia-vpn/amneziawg-go/v3/device"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/amneziawg"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
+	"github.com/opxqo/3x-node/v3/internal/amneziawg"
+	"github.com/opxqo/3x-node/v3/internal/util/wireguard"
 )
 
 // defaultMTU matches internal/amneziawg's own kernel-module interface

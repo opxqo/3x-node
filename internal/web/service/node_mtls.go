@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"strings"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/web/runtime"
 )
 
 // NodeMtlsCaCert returns the PEM of this panel's node-auth CA certificate (the

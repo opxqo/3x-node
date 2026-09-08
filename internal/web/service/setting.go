@@ -18,16 +18,16 @@ import (
 	"github.com/xlzd/gotp"
 	"gorm.io/gorm"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/config"
-	"github.com/mhsanaei/3x-ui/v3/internal/database"
-	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/netproxy"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/random"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/reflect_util"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"github.com/opxqo/3x-node/v3/internal/config"
+	"github.com/opxqo/3x-node/v3/internal/database"
+	"github.com/opxqo/3x-node/v3/internal/database/model"
+	"github.com/opxqo/3x-node/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/util/netproxy"
+	"github.com/opxqo/3x-node/v3/internal/util/random"
+	"github.com/opxqo/3x-node/v3/internal/util/reflect_util"
+	"github.com/opxqo/3x-node/v3/internal/web/entity"
+	"github.com/opxqo/3x-node/v3/internal/xray"
 )
 
 //go:embed config.json

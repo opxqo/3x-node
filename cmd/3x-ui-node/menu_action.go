@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/node"
+	"github.com/opxqo/3x-node/v3/internal/node"
 )
 
 func menuAction(choice, configPath string, c node.Config, reader *bufio.Reader, out io.Writer) error {

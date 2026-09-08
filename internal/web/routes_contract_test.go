@@ -12,8 +12,8 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/database"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/global"
+	"github.com/opxqo/3x-node/v3/internal/database"
+	"github.com/opxqo/3x-node/v3/internal/web/global"
 )
 
 /*

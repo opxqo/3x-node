@@ -4,8 +4,8 @@
 
 状态：实施中。A0、A1、A2、A3 已完成，A4 配置/状态/预览/立即同步/停用入口已完成首版；A4 的待清理确认、A5 真实验收和第二阶段仍未完成。当前发布候选为副面板 `0.1.12-node`。
 
-- Issue：https://github.com/opxqo/3x-ui/issues/1
-- 后续路线：https://github.com/opxqo/3x-ui/issues/1#issuecomment-5560708613
+- Issue：https://github.com/opxqo/3x-node/issues/1
+- 后续路线：https://github.com/opxqo/3x-node/issues/1#issuecomment-5560708613
 - 本文中的新命令、类型、文件及默认值以当前代码和下方阶段说明为准；仍标为“建议”的部分尚未实现。
 - 当前按下面的小任务逐个交付，不一次性实现全部路线；主面板生产代码和生产主副面板仍不操作。
 

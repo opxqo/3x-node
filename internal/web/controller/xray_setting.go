@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	piaprotocol "github.com/mhsanaei/3x-ui/v3/internal/pia"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/integration"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/outbound"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	piaprotocol "github.com/opxqo/3x-node/v3/internal/pia"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/web/service"
+	"github.com/opxqo/3x-node/v3/internal/web/service/integration"
+	"github.com/opxqo/3x-node/v3/internal/web/service/outbound"
+	"github.com/opxqo/3x-node/v3/internal/xray"
 
 	"github.com/gin-gonic/gin"
 )

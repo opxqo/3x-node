@@ -1,6 +1,6 @@
-# Contributing to 3x-ui-docs
+# Contributing to 3x-node-docs
 
-Thanks for helping improve the 3x-ui documentation and product site!
+Thanks for helping improve the 3x-node documentation and product site!
 
 ## Prerequisites
 

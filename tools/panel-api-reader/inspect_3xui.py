@@ -153,7 +153,7 @@ class PanelAPI:
             headers={
                 "Accept": "application/json",
                 "Authorization": f"Bearer {self.token}",
-                "User-Agent": "3x-ui-panel-api-reader/1.0",
+                "User-Agent": "3x-node-panel-api-reader/1.0",
             },
             method="GET",
         )
@@ -232,7 +232,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    token = os.environ.get(args.token_env) or getpass.getpass("3x-ui API token: ")
+    token = os.environ.get(args.token_env) or getpass.getpass("3x-node API token: ")
     try:
         panel = PanelAPI(args.base_url, token, args.timeout, args.insecure)
         result = inspect_panel(panel, set(args.inbound_id) if args.inbound_id else None, args.show_credentials)

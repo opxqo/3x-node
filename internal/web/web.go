@@ -1,4 +1,4 @@
-// Package web provides the main web server implementation for the 3x-ui panel,
+// Package web provides the main web server implementation for the 3x-node panel,
 // including HTTP/HTTPS serving, routing, templates, and background job scheduling.
 package web
 
@@ -16,25 +16,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
-	"github.com/mhsanaei/3x-ui/v3/internal/config"
-	"github.com/mhsanaei/3x-ui/v3/internal/eventbus"
-	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/mtproto"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/sys"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/controller"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/job"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/locale"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/middleware"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/network"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/email"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/panel"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/service/tgbot"
-	"github.com/mhsanaei/3x-ui/v3/internal/web/websocket"
-	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"github.com/opxqo/3x-node/v3/internal/amneziawgnet"
+	"github.com/opxqo/3x-node/v3/internal/config"
+	"github.com/opxqo/3x-node/v3/internal/eventbus"
+	"github.com/opxqo/3x-node/v3/internal/logger"
+	"github.com/opxqo/3x-node/v3/internal/mtproto"
+	"github.com/opxqo/3x-node/v3/internal/util/common"
+	"github.com/opxqo/3x-node/v3/internal/util/sys"
+	"github.com/opxqo/3x-node/v3/internal/web/controller"
+	"github.com/opxqo/3x-node/v3/internal/web/job"
+	"github.com/opxqo/3x-node/v3/internal/web/locale"
+	"github.com/opxqo/3x-node/v3/internal/web/middleware"
+	"github.com/opxqo/3x-node/v3/internal/web/network"
+	"github.com/opxqo/3x-node/v3/internal/web/runtime"
+	"github.com/opxqo/3x-node/v3/internal/web/service"
+	"github.com/opxqo/3x-node/v3/internal/web/service/email"
+	"github.com/opxqo/3x-node/v3/internal/web/service/panel"
+	"github.com/opxqo/3x-node/v3/internal/web/service/tgbot"
+	"github.com/opxqo/3x-node/v3/internal/web/websocket"
+	"github.com/opxqo/3x-node/v3/internal/xray"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
@@ -108,7 +108,7 @@ func EmbeddedDist() embed.FS {
 	return distFS
 }
 
-// Server represents the main web server for the 3x-ui panel with controllers, services, and scheduled jobs.
+// Server represents the main web server for the 3x-node panel with controllers, services, and scheduled jobs.
 type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
@@ -643,7 +643,7 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 		if err := s.tgbotService.TestConnection(); err != nil {
 			return fmt.Errorf("telegram API test failed: %w", err)
 		}
-		s.tgbotService.SendMsgToTgbotAdmins("✅ Test message from 3x-ui")
+		s.tgbotService.SendMsgToTgbotAdmins("✅ Test message from 3x-node")
 		return nil
 	})
 
