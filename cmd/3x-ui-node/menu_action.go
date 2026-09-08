@@ -53,6 +53,10 @@ func menuAction(choice, configPath string, c node.Config, reader *bufio.Reader, 
 		err = addClientInteractive(c, reader, out)
 	case "14":
 		err = deleteClientInteractive(c, reader, out)
+	case "17":
+		err = updateNode(reader, out)
+	case "18":
+		err = uninstallNode(reader, out)
 	case "0", "q", "Q":
 		return nil
 	default:

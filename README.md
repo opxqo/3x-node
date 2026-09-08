@@ -26,7 +26,7 @@
 | 安装环境 | 多种 Linux 发行版，另有 Docker 部署 | Alpine + OpenRC，amd64 / arm64 |
 | 安装脚本 | `install.sh` | `install-node.sh` |
 
-精简节点当前安装版本为 **0.1.20-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
+精简节点当前安装版本为 **0.1.21-node**，Xray 固定为 **26.7.28**。节点版仍属实验性实现，支持范围见[节点使用说明](docs/node/README.md)。
 
 ## 快速安装
 

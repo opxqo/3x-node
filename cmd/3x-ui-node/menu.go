@@ -466,9 +466,9 @@ func showLogs(c node.Config, out io.Writer) error {
 }
 
 func menuHelp(w io.Writer) {
-	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client|doctor]")
+	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client|update|uninstall|doctor]")
 	fmt.Fprintln(w, "不带子命令时进入 TUI：↑↓ 选择，Enter 打开，Esc 返回，q 退出。")
-	fmt.Fprintln(w, "非终端或 TERM=dumb 使用数字菜单；13 为手动添加客户端。")
+	fmt.Fprintln(w, "非终端或 TERM=dumb 使用数字菜单；13 为手动添加客户端，17 为检查更新，18 为卸载节点。")
 }
 
 func runMenu(configPath string, c node.Config, args []string, in io.Reader, out io.Writer) error {
@@ -489,6 +489,10 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 
 		case "add-client":
 			return addClientInteractive(c, bufio.NewReader(in), out)
+		case "update":
+			return updateNode(bufio.NewReader(in), out)
+		case "uninstall":
+			return uninstallNode(bufio.NewReader(in), out)
 		case "help", "-h", "--help":
 			menuHelp(out)
 			return nil
@@ -518,8 +522,9 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 		fmt.Fprintln(out, "║ 11) 默认客户端    12) 设置默认客户端           ║")
 		fmt.Fprintln(out, "║ 13) 手动添加客户端 14) 删除客户端              ║")
 		fmt.Fprintln(out, "║ 15) 系统体检      16) 体检与修复              ║")
+		fmt.Fprintln(out, "║ 17) 检查更新      18) 卸载节点                ║")
 		fmt.Fprintln(out, "╚══════════════════════════════════════════════╝")
-		fmt.Fprint(out, "请输入选项 [0-16]: ")
+		fmt.Fprint(out, "请输入选项 [0-18]: ")
 		choice, err := reader.ReadString('\n')
 		if err != nil && len(choice) == 0 {
 			return nil

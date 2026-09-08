@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.20-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.21-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时首次安装命令会拒绝执行；升级请显式传入 `upgrade`：
@@ -52,12 +52,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.20-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.21-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.20-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.21-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -112,6 +112,8 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
 
+服务分组新增 `检查更新` 与 `卸载节点`（自 `0.1.21-node` 起）。前者下载最新的 `install-node.sh` 并以 `upgrade` 执行，效果与手动运行文档中的一行升级命令一致，始终采用该脚本当时最新固定的版本号与校验和；后者停止并移除开机启动项、`/usr/local/lib/3x-ui-node`、`/usr/local/bin/3x-ui-node`（以及指向它的 `x-ui` 兼容入口）、`/etc/3x-ui-node` 与 `/var/lib/3x-ui-node`，删除前需输入 `uninstall` 二次确认，且该操作不可恢复。两项菜单单项查询命令为 `3x-ui-node menu update` 与 `3x-ui-node menu uninstall`。
+
 TUI 只在菜单打开时运行，不增加节点后台任务。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。基础菜单已包含在 `0.1.18-node` 安装包中。
 
 实时状态仪表盘每 2 秒请求一次本地 API，显示 CPU/内存占用条、最近 30 次成功采样的趋势与网络收发速率（B/s，非累计流量）。CPU 来自系统采样；内存主指标采用探针同口径 `MemTotal - MemAvailable`，并同时列出含缓存总占用、文件缓存、匿名内存、Swap、PSI 等明细。仅页面打开时采样，`p` 暂停/继续，`r` 手动刷新，返回或退出会取消请求；请求失败保留上次数据并标记过期。布局宽屏双栏、窄屏单栏，趋势刻度固定 0–100%，只重绘变化行以减少闪烁。Logo 使用 true-color `#0CF5B8`，需要终端支持 24 位颜色。
@@ -149,7 +151,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.20-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.21-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

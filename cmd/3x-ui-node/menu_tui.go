@@ -40,6 +40,8 @@ var menuEntries = []menuEntry{
 	{id: "7", group: "服务", title: "启动服务", hint: "启动节点服务"},
 	{id: "8", group: "服务", title: "停止服务", hint: "会中断节点连接，执行前确认", interactive: true},
 	{id: "9", group: "服务", title: "重启服务", hint: "会中断节点连接，执行前确认", interactive: true},
+	{id: "17", group: "服务", title: "检查更新", hint: "从 GitHub 下载并升级到最新节点版本，执行前确认", interactive: true},
+	{id: "18", group: "服务", title: "卸载节点", hint: "停止服务并删除安装、配置与数据，不可恢复", interactive: true},
 }
 
 var wordmark = []string{

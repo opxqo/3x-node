@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.20-node"
+	Version     = "0.1.21-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
