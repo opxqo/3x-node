@@ -37,6 +37,11 @@ func updateNode(reader *bufio.Reader, out io.Writer) error {
 		fmt.Fprintln(out, "已取消，未执行升级。")
 		return nil
 	}
+	return performNodeUpdate(out)
+}
+
+// Shared executor: callers must obtain confirmation before invoking it.
+func performNodeUpdate(out io.Writer) error {
 	fmt.Fprintln(out, "正在下载安装脚本并升级，请稍候…")
 	script := fmt.Sprintf(`set -e
 command -v curl >/dev/null 2>&1 || apk add --no-cache ca-certificates curl

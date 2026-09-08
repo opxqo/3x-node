@@ -418,6 +418,8 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 	width, height := 0, 0
 	var dashboard *statusDashboard
 	var browser *inboundBrowser
+	var dialog *serviceDialog
+	serviceResults := make(chan serviceDialogResult, 1)
 	var cancelStatus context.CancelFunc
 	defer func() {
 		if cancelStatus != nil {
@@ -458,13 +460,31 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 		if dashboard != nil {
 			lines = dashboard.lines(width, busy, time.Now())
 		}
-		renderTerminalMenu(frame, width, height, selected, offset, lines, title)
+		if dialog != nil {
+			renderServiceDialog(frame, width, height, selected, dialog, time.Now())
+		} else {
+			renderTerminalMenu(frame, width, height, selected, offset, lines, title)
+		}
 		frame.flush()
 	}
 	draw()
 	for {
 		var key byte
 		select {
+		case result := <-serviceResults:
+			if dialog != nil {
+				dialog.result = result
+				dialog.running, dialog.finished = false, true
+				if dialog.action == "update" {
+					dialog.info = []string{"升级命令执行完成。"}
+					if result.err != nil {
+						dialog.info = []string{"升级失败: " + result.err.Error()}
+					}
+					dialog.info = append(dialog.info, strings.Split(strings.TrimSpace(result.output), "\n")...)
+				}
+				draw()
+			}
+			continue
 		case update := <-updates:
 			if dashboard != nil && update.generation == generation {
 				busy = false
@@ -476,6 +496,10 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 		case <-sigs:
 			return nil
 		case <-ticker.C:
+			if dialog != nil && dialog.running {
+				draw()
+				continue
+			}
 			if dashboard != nil {
 				if !dashboard.paused && !busy && !time.Now().Before(nextUpdate) {
 					requestStatus()
@@ -507,6 +531,10 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 							key = 'k'
 						case 'B':
 							key = 'j'
+						case 'C':
+							key = 'l'
+						case 'D':
+							key = 'h'
 						case '5':
 							key = 'b'
 						case '6':
@@ -524,6 +552,37 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 		}
 		if key == 3 || key == 4 {
 			return nil
+		}
+		if dialog != nil {
+			if (width < 44 || height < 12) && key != 27 && key != 'q' {
+				continue
+			}
+			execute, dismiss := dialog.key(key)
+			if dismiss {
+				if dialog.finished && dialog.result.err != nil && dialog.info == nil {
+					title = dialog.label
+					lines = strings.Split(strings.TrimSpace(dialog.result.output+"\n操作失败: "+dialog.result.err.Error()), "\n")
+					offset = 0
+				}
+				dialog = nil
+			} else if execute {
+				action := dialog.action
+				go func() {
+					var output stdbytes.Buffer
+					var err error
+					if action == "update" {
+						err = performNodeUpdate(&output)
+					} else {
+						err = serviceAction(action, &output)
+					}
+					select {
+					case serviceResults <- serviceDialogResult{output.String(), err}:
+					case <-done:
+					}
+				}()
+			}
+			draw()
+			continue
 		}
 		if lines != nil {
 			page := resultViewport(max(20, width-1), max(6, height), len(lines))
@@ -605,22 +664,36 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 				draw()
 				continue
 			}
+			if entry.id == "6" {
+				var output stdbytes.Buffer
+				if err := menuAction(entry.id, configPath, c, reader, &output); err != nil {
+					fmt.Fprintf(&output, "读取凭据失败: %v", err)
+				}
+				dialog = &serviceDialog{label: entry.title, info: strings.Split(strings.TrimSpace(output.String()), "\n")}
+				draw()
+				continue
+			}
+			if entry.id == "17" {
+				dialog = &serviceDialog{action: "update", label: "更新节点"}
+				draw()
+				continue
+			}
+			if entry.id == "8" || entry.id == "9" {
+				action := "restart"
+				if entry.id == "8" {
+					action = "stop"
+				}
+				dialog = &serviceDialog{action: action, label: entry.title}
+				draw()
+				continue
+			}
 			if entry.interactive {
 				frame.previous = nil
 				term.Restore(fd, original)
 				fmt.Fprint(out, "\x1b[H\x1b[2J\x1b[?25h")
 				fmt.Fprintln(out, "3X NODE / "+entry.title)
 				fmt.Fprintln(out)
-				if entry.id == "9" {
-					answer, e := prompt(reader, out, "重启会中断节点连接，确认重启？y/n", "n")
-					if e == nil && strings.EqualFold(answer, "y") {
-						err = serviceAction("restart", out)
-					} else {
-						err = e
-					}
-				} else {
-					err = menuAction(entry.id, configPath, c, reader, out)
-				}
+				err = menuAction(entry.id, configPath, c, reader, out)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
 						return nil

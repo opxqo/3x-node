@@ -131,14 +131,14 @@ func testREALITYConnection(t *testing.T, network, flow string) {
 		c.Set("flow", flow)
 	}
 	ib.SetClients(clients)
-	// The main panel serializes this optional Vision padding metadata on
-	// REALITY inbounds. The leaf validates it but intentionally omits it from
-	// the server-side Xray account config.
+	// Match the full panel's default server-side Vision padding parameters.
+	// Omitting this exact tuple in the generated account is equivalent to
+	// Xray's default; that equivalence does not hold for custom four-tuples.
 	var settings map[string]json.RawMessage
 	if err := json.Unmarshal(ib.Settings, &settings); err != nil {
 		t.Fatal(err)
 	}
-	settings["testseed"] = json.RawMessage(`[900,500,900]`)
+	settings["testseed"] = json.RawMessage(`[900,500,900,256]`)
 	ib.Settings, _ = json.Marshal(settings)
 	ib.Port = freePort(t)
 	ib.Listen = "127.0.0.1"
@@ -148,6 +148,18 @@ func testREALITYConnection(t *testing.T, network, flow string) {
 		t.Fatal(err)
 	}
 	stream["network"] = network
+	stream["tcpSettings"] = map[string]any{"acceptProxyProtocol": false, "header": map[string]any{"type": "none"}}
+	reality := stream["realitySettings"].(map[string]any)
+	reality["xver"] = 0
+	reality["minClientVer"] = "0.0.1"
+	reality["maxClientVer"] = ""
+	reality["maxTimediff"] = 0
+	reality["mldsa65Seed"] = ""
+	reality["settings"] = map[string]any{"publicKey": base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes()), "fingerprint": "chrome", "serverName": "", "spiderX": "/", "mldsa65Verify": ""}
+	for i := 1; i < 24; i++ {
+		reality["serverNames"] = append(reality["serverNames"].([]any), "test"+strconv.Itoa(i)+".example.org")
+	}
+	reality["shortIds"] = []string{"0123456789", "012345", "0123456789abcdef", "0123456789abcd", "0123", "0123456789ab", "ab", "01234567"}
 	ib.StreamSettings, _ = json.Marshal(stream)
 	call("POST", "inbounds/add", ib, true)
 	port := freePort(t)

@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.22-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.23-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时首次安装命令会拒绝执行；升级请显式传入 `upgrade`：
@@ -52,12 +52,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.22-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.23-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.22-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.23-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -110,7 +110,7 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 入站列表是可选择的两级页面：`↑/↓` 或 `j/k` 移动光标（整行反显），Enter 打开该入站的详情，Esc 从详情退回列表、再按一次才回到主菜单。详情按基本、传输、REALITY 或 TLS、客户端分段列出监听地址、传输与安全、目标与 SNI、Short IDs、客户端 UUID 与 flow。REALITY 的公钥不读配置里存的 `settings.publicKey`，而是由节点上实际运行的 `privateKey` 现场推导——Xray 只用私钥认证、从不读那个字段，两者不一致时页面直接告警并给出客户端应当使用的 `pbk`。该页面自 `0.1.19-node` 起提供。
 
-版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
+版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启使用居中圆角确认弹窗：背景菜单弱化，默认选中取消，`←/→` 或 Tab 切换按钮，Enter 执行当前选择，Esc 取消。执行中显示进度并阻止重复提交，完成后在弹窗内反馈结果，失败详情在关闭后展示。小于 44×12 的窗口提示扩大终端，并禁用隐藏按钮的确认操作。「连接凭据」主动打开后在同款信息弹窗展示，长 Token/指纹自动换行，超出高度可用 ↑↓ 滚动，Enter/Esc 关闭。「检查更新」使用同款确认弹窗，明确提示下载升级及服务中断；执行期间显示状态，结束后在可滚动弹窗内展示完整输出。客户端写操作保留原有确认。
 
 服务分组新增 `检查更新` 与 `卸载节点`（自 `0.1.21-node` 起）。前者下载最新的 `install-node.sh` 并以 `upgrade` 执行，效果与手动运行文档中的一行升级命令一致，始终采用该脚本当时最新固定的版本号与校验和；后者停止并移除开机启动项、`/usr/local/lib/3x-ui-node`、`/usr/local/bin/3x-ui-node`（以及指向它的 `x-ui` 兼容入口）、`/etc/3x-ui-node` 与 `/var/lib/3x-ui-node`，删除前需输入 `uninstall` 二次确认，且该操作不可恢复。两项菜单单项查询命令为 `3x-ui-node menu update` 与 `3x-ui-node menu uninstall`。
 
@@ -151,7 +151,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.22-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.23-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
