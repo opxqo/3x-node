@@ -51,6 +51,7 @@ type statusDashboard struct {
 	updated        time.Time
 	failed, paused bool
 	cpu, memory    []float64
+	oomBaseline    *uint64
 }
 
 func (d *statusDashboard) accept(s serverStatus, err error, now time.Time) {
@@ -59,10 +60,19 @@ func (d *statusDashboard) accept(s serverStatus, err error, now time.Time) {
 		return
 	}
 	d.status, d.updated = s, now
+	if m := s.MemoryDetail; m != nil && m.OOMKills != nil {
+		if d.oomBaseline == nil || *m.OOMKills < *d.oomBaseline {
+			v := *m.OOMKills
+			d.oomBaseline = &v
+		}
+	}
 	d.cpu = append(d.cpu, s.CPU)
 	mem := 0.0
 	if s.Mem.Total > 0 {
 		mem = 100 * float64(s.Mem.Current) / float64(s.Mem.Total)
+	}
+	if m := s.MemoryDetail; m != nil && m.ProbeUsed != nil && m.Limit > 0 {
+		mem = 100 * float64(*m.ProbeUsed) / float64(m.Limit)
 	}
 	d.memory = append(d.memory, mem)
 	if len(d.cpu) > 30 {
@@ -114,9 +124,9 @@ func (d *statusDashboard) lines(width int, busy bool, now time.Time) []string {
 	}
 	lines := []string{mode, ""}
 	if d.updated.IsZero() {
-		rows := 24
+		rows := 30
 		if block < 56 {
-			rows = 33
+			rows = 39
 		}
 		if d.failed {
 			lines = append(lines, "无法读取节点状态", "按 r 重试，或 Esc 返回后运行系统体检")
@@ -148,6 +158,12 @@ func (d *statusDashboard) lines(width int, busy bool, now time.Time) []string {
 	}
 	cpu := []string{"CPU · 系统采样", fmt.Sprintf("%.1f%%", s.CPU), percentBar(s.CPU, column), percentTrend(d.cpu, column), "固定刻度 0–100%"}
 	memory := []string{"内存 · 容器/系统", memValue, percentBar(mem, column), percentTrend(d.memory, column), bytes(s.Mem.Current) + " / " + bytes(s.Mem.Total)}
+	if m := s.MemoryDetail; m != nil && m.ProbeUsed != nil && m.Limit > 0 {
+		mem = 100 * float64(*m.ProbeUsed) / float64(m.Limit)
+		memory = []string{"内存 · 探针口径", fmt.Sprintf("%.1f%%", mem), percentBar(mem, column), percentTrend(d.memory, column), bytes(*m.ProbeUsed) + " / " + bytes(m.Limit)}
+	} else {
+		memory[0] = "内存 · 总占用含缓存"
+	}
 	pair := func(left, right []string) {
 		if wide {
 			for i := range left {
@@ -160,6 +176,7 @@ func (d *statusDashboard) lines(width int, busy bool, now time.Time) []string {
 		}
 	}
 	pair(cpu, memory)
+	lines = append(lines, memoryDetailLines(s.MemoryDetail, d.oomBaseline)...)
 	lines = append(lines, "", strings.Repeat("─", block))
 	pair([]string{"↑ 发送速率", bytes(s.NetIO.Up) + "/s"}, []string{"↓ 接收速率", bytes(s.NetIO.Down) + "/s"})
 	lines = append(lines, "", fmt.Sprintf("更新 %s · %d 秒前", d.updated.Format("15:04:05"), max(0, int(now.Sub(d.updated).Seconds()))), "趋势：本页最近 30 次采样；非累计流量")
@@ -169,6 +186,34 @@ func (d *statusDashboard) lines(width int, busy bool, now time.Time) []string {
 		lines = append(lines, "数据已过期；检查服务或按 r 重试")
 	}
 	return lines
+}
+
+func memoryDetailLines(m *node.MemoryDetail, baseline *uint64) []string {
+	if m == nil {
+		return []string{"", "内存细分不可用；总占用不等于程序用量", "", "", "", ""}
+	}
+	value := func(v *uint64) string {
+		if v == nil {
+			return "不可用"
+		}
+		return bytes(*v)
+	}
+	pressure := "不可用"
+	if m.PressureSome10 != nil {
+		pressure = fmt.Sprintf("%.2f%%", *m.PressureSome10)
+	}
+	oom := "不可用"
+	if m.OOMKills != nil {
+		oom = fmt.Sprintf("历史 %d", *m.OOMKills)
+		if baseline != nil && *m.OOMKills >= *baseline {
+			oom += fmt.Sprintf(" · 本页新增 %d", *m.OOMKills-*baseline)
+		}
+	}
+	probe := "不可用"
+	if m.ProbeUsed != nil {
+		probe = bytes(*m.ProbeUsed) + "（总内存−MemAvailable）"
+	}
+	return []string{"", "探针口径 " + probe, "总占用 " + bytes(m.Current) + " / " + bytes(m.Limit) + "（含缓存）", "文件缓存 " + value(m.File) + " · 匿名 " + value(m.Anon), "Swap " + value(m.Swap) + " · 内存等待10秒均值 " + pressure, "OOM 杀进程：" + oom}
 }
 
 func managementLines(activity *node.ManagementActivity, now time.Time) []string {

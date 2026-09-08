@@ -25,8 +25,9 @@ type apiResult[T any] struct {
 }
 
 type serverStatus struct {
-	CPU float64 `json:"cpu"`
-	Mem struct {
+	MemoryDetail *node.MemoryDetail `json:"memoryDetail"`
+	CPU          float64            `json:"cpu"`
+	Mem          struct {
 		Current uint64 `json:"current"`
 		Total   uint64 `json:"total"`
 	} `json:"mem"`

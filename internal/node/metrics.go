@@ -66,6 +66,7 @@ func (n *Node) Status() map[string]any {
 	}
 	m.cached = map[string]any{"cpu": cpu, "mem": map[string]uint64{"current": current, "total": total}, "xray": map[string]string{"state": xstate, "errorMsg": xerr, "version": XrayVersion}, "panelVersion": Version, "panelGuid": n.state.GUID, "uptime": uint64(time.Since(n.started).Seconds()), "netIO": map[string]uint64{"up": up, "down": down}, "nodeAgent": map[string]any{"version": Version, "compatibility": "ed6bc1d8", "xrayPid": n.engine.PID()}}
 	m.cached["managementActivity"] = n.management
+	m.cached["memoryDetail"] = memoryDetail("/sys/fs/cgroup")
 	m.at = time.Now()
 	m.netSent, m.netRecv = sent, recv
 	return m.cached

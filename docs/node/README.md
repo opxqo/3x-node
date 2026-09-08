@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.16-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.17-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
@@ -47,12 +47,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.16-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.17-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.16-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.17-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -105,9 +105,9 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
 
-TUI 只在菜单打开时运行，不增加节点后台任务。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。基础菜单已包含在 `0.1.16-node` 安装包中。
+TUI 只在菜单打开时运行，不增加节点后台任务。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。基础菜单已包含在 `0.1.17-node` 安装包中。
 
-源码新增实时状态仪表盘（尚未发版）：服务状态页每 2 秒请求一次本地 API，显示 CPU/内存占用条、最近 30 次成功采样的趋势与网络收发速率（B/s，非累计流量）。CPU 来自系统采样，内存优先使用容器限制与用量，不代表单个节点进程占用。仅页面打开时采样，`p` 暂停/继续，`r` 手动刷新，返回或退出会取消请求；请求失败保留上次数据并标记过期。布局宽屏双栏、窄屏单栏，趋势刻度固定 0–100%，只重绘变化行以减少闪烁。Logo 使用 true-color `#0CF5B8`，需要终端支持 24 位颜色。
+实时状态仪表盘每 2 秒请求一次本地 API，显示 CPU/内存占用条、最近 30 次成功采样的趋势与网络收发速率（B/s，非累计流量）。CPU 来自系统采样；内存主指标采用探针同口径 `MemTotal - MemAvailable`，并同时列出含缓存总占用、文件缓存、匿名内存、Swap、PSI 等明细。仅页面打开时采样，`p` 暂停/继续，`r` 手动刷新，返回或退出会取消请求；请求失败保留上次数据并标记过期。布局宽屏双栏、窄屏单栏，趋势刻度固定 0–100%，只重绘变化行以减少闪烁。Logo 使用 true-color `#0CF5B8`，需要终端支持 24 位颜色。
 
 ```sh
 # 交互菜单：状态、入站、客户端流量、监听端口和 Xray 错误
@@ -142,7 +142,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.16-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.17-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
@@ -151,6 +151,8 @@ sh install.sh upgrade ./3x-ui-node-0.1.16-linux-amd64.tar.gz TRUSTED_SHA256
 不要通过主面板的完整面板更新按钮升级该程序。
 
 ## 计数与恢复边界
+
+内存展示采用探针同口径：主指标使用 `/proc/meminfo` 的 `MemTotal - MemAvailable`，容器总占用使用 cgroup `memory.current / memory.max`，并列出文件缓存、匿名内存、Swap、PSI some avg10（10 秒平均内存等待占比）及历史/本页新增 OOM 杀进程数。工作集（总占用减非活跃文件页）仅作辅助参考，不是进程私有内存；指标缺失显示不可用，不凭总占用百分比判断 OOM 或泄漏。
 
 5 秒采样非重置计数，仅变化时保存；配置和清零立即保存。
 本地计数与主面板跨节点总量分开；跨节点总量24小时过期，不叠加到回传值。
