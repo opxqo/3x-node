@@ -40,8 +40,16 @@ var menuEntries = []menuEntry{
 	{id: "7", group: "服务", title: "启动服务", hint: "启动节点服务"},
 	{id: "8", group: "服务", title: "停止服务", hint: "会中断节点连接，执行前确认", interactive: true},
 	{id: "9", group: "服务", title: "重启服务", hint: "会中断节点连接，执行前确认", interactive: true},
-	{id: "17", group: "服务", title: "检查更新", hint: "从 GitHub 下载并升级到最新节点版本，执行前确认", interactive: true},
-	{id: "18", group: "服务", title: "卸载节点", hint: "停止服务并删除安装、配置与数据，不可恢复", interactive: true},
+	{id: "17", group: "服务", title: "检查更新", hint: "下载并升级到最新版本，执行前确认", interactive: true},
+	{id: "18", group: "服务", title: "卸载节点", hint: "停止服务并删除全部数据，不可恢复", interactive: true},
+}
+
+func widestMenuHint() int {
+	width := 0
+	for _, e := range menuEntries {
+		width = max(width, terminalDisplayWidth(e.hint))
+	}
+	return width
 }
 
 var wordmark = []string{
@@ -130,6 +138,7 @@ const (
 	kindSelected
 	kindText
 	kindAccent
+	kindHint
 )
 
 type terminalRow struct {
@@ -141,7 +150,7 @@ func (r terminalRow) sequence() string {
 	switch r.kind {
 	case kindLogo, kindAccent:
 		return "\x1b[1;38;2;12;245;184m"
-	case kindCaption, kindGroup:
+	case kindCaption, kindGroup, kindHint:
 		return "\x1b[2m"
 	case kindSelected:
 		return "\x1b[7m"
@@ -270,9 +279,9 @@ func renderTerminalMenu(out io.Writer, width, height, selected, offset int, line
 	var footer []terminalRow
 	if lines != nil {
 		body = resultRows(width, height, offset, lines, title)
-		footer = []terminalRow{{}, {text: "↑↓ 滚动 · g/G 首尾 · Esc 返回", kind: kindCaption}}
+		footer = []terminalRow{{}, {text: "↑↓ 滚动 · g/G 首尾 · Esc 返回", kind: kindHint}}
 		if title == "入站列表" {
-			footer = []terminalRow{{}, {text: "↑↓ 选择 · Enter 查看详情 · Esc 返回", kind: kindCaption}}
+			footer = []terminalRow{{}, {text: "↑↓ 选择 · Enter 查看详情 · Esc 返回", kind: kindHint}}
 		}
 		if title == "实时服务状态" {
 			for i := range body {
@@ -280,14 +289,14 @@ func renderTerminalMenu(out io.Writer, width, height, selected, offset int, line
 					body[i].kind = kindAccent
 				}
 			}
-			footer = []terminalRow{{}, {text: "p 暂停/继续 · r 刷新 · ↑↓ 滚动 · Esc 返回", kind: kindCaption}}
+			footer = []terminalRow{{}, {text: "p 暂停/继续 · r 刷新 · ↑↓ 滚动 · Esc 返回", kind: kindHint}}
 		}
 	} else {
 		body = menuBodyRows(width, height, selected)
 		footer = []terminalRow{
 			{},
-			{text: menuEntries[selected].hint, kind: kindCaption},
-			{text: "↑↓ 选择 · Enter 打开 · q 退出", kind: kindCaption},
+			{text: menuEntries[selected].hint, kind: kindHint},
+			{text: "↑↓ 选择 · Enter 打开 · q 退出", kind: kindHint},
 		}
 	}
 
@@ -300,7 +309,13 @@ func renderTerminalMenu(out io.Writer, width, height, selected, offset int, line
 	rows = append(rows, body...)
 	rows = append(rows, footer...)
 
+	// Sized against every hint, not just the selected one, so the block
+	// (and the group rules drawn to its width below) hold still as the
+	// cursor moves instead of resizing with whichever hint is showing.
 	block := menuMinBlock
+	if lines == nil {
+		block = max(block, widestMenuHint()+2)
+	}
 	for _, r := range rows {
 		if !r.centered() {
 			block = max(block, terminalDisplayWidth(r.text)+2)

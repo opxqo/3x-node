@@ -125,6 +125,46 @@ func TestWordmarkRowsAlign(t *testing.T) {
 	}
 }
 
+// The footer hint changes with the selected entry, but the content block
+// (group dividers, item indent) must not resize or the whole menu jiggles
+// left/right as the cursor moves.
+func TestFooterHintAlignsWithoutShiftingTheContentBlock(t *testing.T) {
+	width, height := 100, 32
+	blockWidth := -1
+	for i, entry := range menuEntries {
+		rows := renderRows(t, width, height, i, 0, nil, "")
+		dividerIndent, dividerWidth := -1, -1
+		hintIndent, hintLine := -1, ""
+		for _, row := range rows {
+			plain := sgr.Replace(row)
+			if dividerIndent < 0 && strings.Contains(plain, "─") {
+				trimmed := strings.TrimLeft(plain, " ")
+				dividerIndent = len(plain) - len(trimmed)
+				dividerWidth = terminalDisplayWidth(trimmed)
+			}
+			if strings.Contains(plain, entry.hint) {
+				trimmed := strings.TrimLeft(plain, " ")
+				hintIndent = len(plain) - len(trimmed)
+				hintLine = strings.TrimRight(trimmed, " ")
+			}
+		}
+		if dividerIndent < 0 {
+			t.Fatalf("entry %d: no group divider rendered", i)
+		}
+		if hintLine != entry.hint {
+			t.Fatalf("entry %d: hint truncated or missing: got %q want %q", i, hintLine, entry.hint)
+		}
+		if hintIndent != dividerIndent {
+			t.Fatalf("entry %d: hint indent %d does not match content block indent %d", i, hintIndent, dividerIndent)
+		}
+		if blockWidth == -1 {
+			blockWidth = dividerWidth
+		} else if dividerWidth != blockWidth {
+			t.Fatalf("entry %d: content block width changed from %d to %d as the selection moved", i, blockWidth, dividerWidth)
+		}
+	}
+}
+
 func TestTerminalTextCannotInjectControls(t *testing.T) {
 	s := terminalClip("name\x1b[2J\r\x07中文", 80)
 	if strings.ContainsAny(s, "\x1b\r\x07") {
