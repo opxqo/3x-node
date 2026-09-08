@@ -11,8 +11,8 @@ case "$action" in install|upgrade) ;; *) die 'Usage: sh install-node.sh [install
 # Pin the node release: the repository also publishes full-panel releases.
 version=0.1.24
 case "$(uname -m)" in
-    x86_64) arch=amd64; expected=b1cdc989c99284f708783970d336b471d0e3c9c155b80412da2cebc2cefe0cfa;;
-    aarch64) arch=arm64; expected=69853213f335cb09e8d715b8203a6cf0e4ca5cc7ed8f3ed7f6427542b3de8d79;;
+    x86_64) arch=amd64; expected=c3935953b80845923ba3ac9cce621e1ffc7324bd22390d13e077c456da1200fa;;
+    aarch64) arch=arm64; expected=982297b5e4a35df741283d310bd0d4e6529e819300fd00d897aa3674164ee9fe;;
     *) die 'Only amd64 and arm64 are supported.';;
 esac
 base=/usr/local/lib/3x-ui-node
