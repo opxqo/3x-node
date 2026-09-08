@@ -17,10 +17,14 @@ import (
 func TestReconcileInbound_SkipsUnchanged(t *testing.T) {
 	var pushes atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/panel/api/inbounds/update/") {
+		if r.Method == http.MethodPost && (strings.Contains(r.URL.Path, "/panel/api/inbounds/add") || strings.Contains(r.URL.Path, "/panel/api/inbounds/update/")) {
 			pushes.Add(1)
 		}
 		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(r.URL.Path, "/panel/api/inbounds/add") {
+			_, _ = w.Write([]byte(`{"success":true,"obj":{"id":7,"tag":"in-1"}}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"success":true}`))
 	}))
 	defer srv.Close()
@@ -61,6 +65,56 @@ func TestReconcileInbound_SkipsUnchanged(t *testing.T) {
 	}
 	if got := pushes.Load(); got != 3 {
 		t.Fatalf("absent-on-node reconcile pushes=%d, want 3", got)
+	}
+}
+
+// TestReconcileInbound_AbsentOnNodeIgnoresStaleCachedID proves a node reset
+// creates the missing inbound and replaces its stale cached remote ID.
+func TestReconcileInbound_AbsentOnNodeIgnoresStaleCachedID(t *testing.T) {
+	var adds atomic.Int32
+	var updates atomic.Int32
+	var updatePath atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.Contains(r.URL.Path, "/panel/api/inbounds/add"):
+			adds.Add(1)
+			_, _ = w.Write([]byte(`{"success":true,"obj":{"id":11,"tag":"in-reset"}}`))
+		case strings.Contains(r.URL.Path, "/panel/api/inbounds/update/"):
+			updates.Add(1)
+			updatePath.Store(r.URL.Path)
+			_, _ = w.Write([]byte(`{"success":true}`))
+		default:
+			_, _ = w.Write([]byte(`{"success":true}`))
+		}
+	}))
+	defer srv.Close()
+
+	r := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	ib := &model.Inbound{Tag: "in-reset", Protocol: model.VLESS, Port: 443, Settings: `{"clients":[]}`}
+	r.cacheSet(ib.Tag, 7)
+
+	pushed, err := r.ReconcileInbound(context.Background(), ib, false)
+	if err != nil || !pushed {
+		t.Fatalf("reconcile absent inbound: pushed=%v err=%v, want successful create", pushed, err)
+	}
+	if got := adds.Load(); got != 1 {
+		t.Fatalf("add requests=%d, want 1", got)
+	}
+	if got := updates.Load(); got != 0 {
+		t.Fatalf("stale-ID update requests=%d, want 0", got)
+	}
+
+	ib.Settings = `{"clients":[{"email":"a@x"}]}`
+	pushed, err = r.ReconcileInbound(context.Background(), ib, true)
+	if err != nil || !pushed {
+		t.Fatalf("reconcile changed inbound: pushed=%v err=%v, want update", pushed, err)
+	}
+	if got := updates.Load(); got != 1 {
+		t.Fatalf("update requests=%d, want 1", got)
+	}
+	if got, _ := updatePath.Load().(string); got != "/panel/api/inbounds/update/11" {
+		t.Fatalf("update path=%q, want new remote ID path", got)
 	}
 }
 
@@ -283,7 +337,7 @@ func TestDelInboundDropsReconcileFingerprint(t *testing.T) {
 	ib := &model.Inbound{Tag: "in-del", Protocol: model.VLESS, Port: 443, Settings: `{"clients":[]}`}
 	r.cacheSet(ib.Tag, 7)
 
-	if pushed, err := r.ReconcileInbound(context.Background(), ib, false); err != nil || !pushed {
+	if pushed, err := r.ReconcileInbound(context.Background(), ib, true); err != nil || !pushed {
 		t.Fatalf("initial reconcile: pushed=%v err=%v, want push", pushed, err)
 	}
 	if err := r.DelInbound(context.Background(), ib); err != nil {

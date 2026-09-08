@@ -487,13 +487,21 @@ func (r *Remote) SetInboundSubSortIndex(ctx context.Context, ib *model.Inbound, 
 // every inbound's full settings" into "send only what changed".
 func (r *Remote) ReconcileInbound(ctx context.Context, ib *model.Inbound, existsOnNode bool) (bool, error) {
 	fp := wireFingerprint(wireInbound(ib, r.node.Id))
-	if existsOnNode {
-		r.mu.RLock()
-		prev, ok := r.pushedFP[ib.Tag]
-		r.mu.RUnlock()
-		if ok && prev == fp {
-			return false, nil
+	if !existsOnNode {
+		// The live inventory is authoritative; after a node reset a cached remote
+		// ID may be stale, so seed the missing inbound through the create endpoint.
+		r.cacheDel(ib.Tag)
+		if err := r.AddInbound(ctx, ib); err != nil {
+			return false, err
 		}
+		return true, nil
+	}
+
+	r.mu.RLock()
+	prev, ok := r.pushedFP[ib.Tag]
+	r.mu.RUnlock()
+	if ok && prev == fp {
+		return false, nil
 	}
 	if err := r.UpdateInbound(ctx, ib, ib); err != nil {
 		return false, err
