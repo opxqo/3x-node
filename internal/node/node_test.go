@@ -397,6 +397,36 @@ func TestVlessEncryptionDefaults(t *testing.T) {
 	}
 }
 
+func TestVlessVisionTestseedCompatibility(t *testing.T) {
+	for _, value := range []string{`[900,500,900]`, `[900,500,900,256]`} {
+		t.Run(value, func(t *testing.T) {
+			ib := testInbound()
+			ib.Settings = Object(`{"clients":[],"decryption":"none","encryption":"none","testseed":` + value + `}`)
+			if err := ValidateInbound(&ib); err != nil {
+				t.Fatalf("Vision testseed rejected: %v", err)
+			}
+			n, _ := testNode(t)
+			if _, err := n.PutInbound(ib, 1); err != nil {
+				t.Fatalf("inbound with Vision testseed rejected: %v", err)
+			}
+		})
+	}
+	for _, value := range []string{`[900,500]`, `[900,500,900,256,1]`, `[900,0,900]`, `"900"`} {
+		t.Run("invalid-"+value, func(t *testing.T) {
+			ib := testInbound()
+			ib.Settings = Object(`{"clients":[],"decryption":"none","encryption":"none","testseed":` + value + `}`)
+			if err := ValidateInbound(&ib); err == nil {
+				t.Fatalf("invalid Vision testseed accepted: %s", value)
+			}
+		})
+	}
+	withFallback := testInbound()
+	withFallback.Settings = Object(`{"clients":[],"decryption":"none","encryption":"none","fallbacks":[{"name":"fallback"}]}`)
+	if err := ValidateInbound(&withFallback); err == nil {
+		t.Fatal("non-empty VLESS fallbacks accepted")
+	}
+}
+
 func TestValidatePlainVLESSTCP(t *testing.T) {
 	ib := testInbound()
 	ib.StreamSettings = Object(`{"network":"tcp","security":"none","tcpSettings":{"header":{"type":"none"}}}`)

@@ -9,10 +9,10 @@ case "$action" in install|upgrade) ;; *) die 'Usage: sh install-node.sh [install
 [ "$(id -u)" = 0 ] || die 'Run as root.'
 [ -f /etc/alpine-release ] && command -v rc-service >/dev/null || die 'Alpine Linux with OpenRC is required.'
 # Pin the node release: the repository also publishes full-panel releases.
-version=0.1.17
+version=0.1.18
 case "$(uname -m)" in
-    x86_64) arch=amd64; expected=659cc38bac25098ee3bd11447c7206badb280366406f319a30b756aedac5b70a;;
-    aarch64) arch=arm64; expected=81b764bbfc5e5a10474fd2cdac7801d066f0c6594a2b68e46229a824e05f9a42;;
+    x86_64) arch=amd64; expected=ced4dab00a928e6ec4f1aa0d717b5023b0edecf4cd43beb60308081bc56d38bf;;
+    aarch64) arch=arm64; expected=9ad815dbf83b6f0cf4d12a3e2d37cafb32f7493edfdf7f6d4ec7e6804c113f52;;
     *) die 'Only amd64 and arm64 are supported.';;
 esac
 base=/usr/local/lib/3x-ui-node

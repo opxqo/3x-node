@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.17-node"
+	Version     = "0.1.18-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -264,8 +264,11 @@ func ValidateInbound(i *Inbound) error {
 	if decryption != "none" {
 		return errors.New("VLESS decryption must be none")
 	}
-	if !emptyJSON(settings["fallbacks"]) || !emptyJSON(settings["testseed"]) {
-		return errors.New("VLESS fallbacks and testseed are unsupported")
+	if !emptyJSON(settings["fallbacks"]) {
+		return errors.New("VLESS fallbacks are unsupported")
+	}
+	if err := validateIgnoredVisionTestseed(settings["testseed"]); err != nil {
+		return err
 	}
 	var stream map[string]json.RawMessage
 	if err := json.Unmarshal(i.StreamSettings, &stream); err != nil {
@@ -418,4 +421,25 @@ func validateClient(c Client) error {
 func emptyJSON(b []byte) bool {
 	s := string(bytes.TrimSpace(b))
 	return s == "" || s == "null" || s == "false" || s == "0" || s == `""` || s == "{}" || s == "[]"
+}
+
+// validateIgnoredVisionTestseed accepts the full panel's optional Vision
+// padding metadata. It belongs to an outbound VLESS account, while this
+// lightweight node only builds the server-side inbound accounts and therefore
+// intentionally ignores it when generating the Xray config. Older panel rows
+// may contain three values; Xray fills the fourth value with its default.
+func validateIgnoredVisionTestseed(raw []byte) error {
+	if emptyJSON(raw) {
+		return nil
+	}
+	var seed []uint64
+	if err := json.Unmarshal(raw, &seed); err != nil || (len(seed) != 3 && len(seed) != 4) {
+		return errors.New("VLESS testseed must contain 3 or 4 positive integers")
+	}
+	for _, value := range seed {
+		if value == 0 || value > uint64(^uint32(0)) {
+			return errors.New("VLESS testseed must contain 3 or 4 positive integers")
+		}
+	}
+	return nil
 }

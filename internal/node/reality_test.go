@@ -34,6 +34,20 @@ func freePort(t *testing.T) int {
 }
 
 func TestREALITYConnectionHotChangesAndRecovery(t *testing.T) {
+	for _, network := range []string{"tcp", "raw"} {
+		for _, flow := range []string{"", "xtls-rprx-vision"} {
+			name := flow
+			if name == "" {
+				name = "no-vision"
+			}
+			t.Run(network+"/"+name, func(t *testing.T) {
+				testREALITYConnection(t, network, flow)
+			})
+		}
+	}
+}
+
+func testREALITYConnection(t *testing.T, network, flow string) {
 	binary := os.Getenv("NODE_XRAY_TEST_BINARY")
 	if binary == "" {
 		t.Skip("set NODE_XRAY_TEST_BINARY to the pinned Xray binary")
@@ -109,13 +123,41 @@ func TestREALITYConnectionHotChangesAndRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	ib := testInbound()
+	clients, err := ib.Clients()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range clients {
+		c.Set("flow", flow)
+	}
+	ib.SetClients(clients)
+	// The main panel serializes this optional Vision padding metadata on
+	// REALITY inbounds. The leaf validates it but intentionally omits it from
+	// the server-side Xray account config.
+	var settings map[string]json.RawMessage
+	if err := json.Unmarshal(ib.Settings, &settings); err != nil {
+		t.Fatal(err)
+	}
+	settings["testseed"] = json.RawMessage(`[900,500,900]`)
+	ib.Settings, _ = json.Marshal(settings)
 	ib.Port = freePort(t)
 	ib.Listen = "127.0.0.1"
 	ib.StreamSettings, _ = json.Marshal(map[string]any{"network": "tcp", "security": "reality", "realitySettings": map[string]any{"show": false, "target": target.Listener.Addr().String(), "serverNames": []string{"example.org"}, "privateKey": base64.RawURLEncoding.EncodeToString(key.Bytes()), "shortIds": []string{"ab"}}})
+	var stream map[string]any
+	if err := json.Unmarshal(ib.StreamSettings, &stream); err != nil {
+		t.Fatal(err)
+	}
+	stream["network"] = network
+	ib.StreamSettings, _ = json.Marshal(stream)
 	call("POST", "inbounds/add", ib, true)
 	port := freePort(t)
 	clientConfig := map[string]any{"log": map[string]any{"loglevel": "warning"}, "inbounds": []any{map[string]any{"listen": "127.0.0.1", "port": port, "protocol": "socks", "settings": map[string]any{"auth": "noauth"}}}, "outbounds": []any{map[string]any{"protocol": "vless", "settings": map[string]any{"vnext": []any{map[string]any{"address": "127.0.0.1", "port": ib.Port, "users": []any{map[string]any{"id": "00000000-0000-4000-8000-000000000001", "encryption": "none", "flow": "xtls-rprx-vision"}}}}}, "streamSettings": map[string]any{"network": "tcp", "security": "reality", "realitySettings": map[string]any{"fingerprint": "chrome", "serverName": "example.org", "publicKey": base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes()), "shortId": "ab"}}}}}
 	path := filepath.Join(dir, "client.json")
+	outbound := clientConfig["outbounds"].([]any)[0].(map[string]any)
+	clientStream := outbound["streamSettings"].(map[string]any)
+	clientStream["network"] = network
+	user := outbound["settings"].(map[string]any)["vnext"].([]any)[0].(map[string]any)["users"].([]any)[0].(map[string]any)
+	user["flow"] = flow
 	b, _ := json.Marshal(clientConfig)
 	if err = AtomicWrite(path, b, false); err != nil {
 		t.Fatal(err)
@@ -165,6 +207,7 @@ func TestREALITYConnectionHotChangesAndRecovery(t *testing.T) {
 	}
 	pid := core.PID()
 	bob := testClient("bob", "00000000-0000-4000-8000-000000000002")
+	bob.Set("flow", flow)
 	call("POST", "clients/add", map[string]any{"client": bob, "inboundIds": []int{1}}, true)
 	call("POST", "clients/del/bob", nil, true)
 	if core.PID() != pid {
@@ -189,5 +232,46 @@ func TestREALITYConnectionHotChangesAndRecovery(t *testing.T) {
 	if err != nil || string(b) != "node-reality-ok" {
 		t.Fatalf("rollback connectivity: %q %v", b, err)
 	}
-	t.Logf("REALITY, Vision, API CRUD, hot updates and failed-config rollback passed; server PID=%d", core.PID())
+	// A syntactically valid but unrelated REALITY public key must never reach
+	// the protected origin. Use a separate client and disable connection reuse.
+	wrongKey, err := ecdh.X25519().GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongPort := freePort(t)
+	clientConfig["inbounds"].([]any)[0].(map[string]any)["port"] = wrongPort
+	clientStream["realitySettings"].(map[string]any)["publicKey"] = base64.RawURLEncoding.EncodeToString(wrongKey.PublicKey().Bytes())
+	wrongPath := filepath.Join(dir, "wrong-key.json")
+	b, _ = json.Marshal(clientConfig)
+	if err := AtomicWrite(wrongPath, b, false); err != nil {
+		t.Fatal(err)
+	}
+	wrongClient := exec.Command(binary, "run", "-config", wrongPath)
+	if err := wrongClient.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = wrongClient.Process.Kill(); _ = wrongClient.Wait() })
+	for deadline := time.Now().Add(3 * time.Second); ; {
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(wrongPort)), 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("wrong-key test client did not start")
+		}
+		time.Sleep(30 * time.Millisecond)
+	}
+	wrongDialer, err := proxy.SOCKS5("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(wrongPort)), nil, &net.Dialer{Timeout: time.Second})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongTransport := &http.Transport{DialContext: wrongDialer.(proxy.ContextDialer).DialContext, DisableKeepAlives: true}
+	defer wrongTransport.CloseIdleConnections()
+	wrongHTTP := &http.Client{Transport: wrongTransport, Timeout: 3 * time.Second}
+	if resp, err := wrongHTTP.Get(origin.URL); err == nil {
+		resp.Body.Close()
+		t.Fatal("wrong REALITY public key unexpectedly reached HTTP origin")
+	}
+	t.Logf("REALITY network=%s flow=%q: transfer, hot changes, failed-config recovery and wrong-key rejection passed; server PID=%d", network, flow, core.PID())
 }
