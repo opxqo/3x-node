@@ -39,7 +39,11 @@ func (n *Node) Handler() http.Handler {
 	mux := &routeMux{}
 	prefix := n.Config.BasePath + "panel/api/"
 	add := func(method, path string, fn func(*http.Request) (any, error)) {
-		mux.HandleFunc(method+" "+prefix+path, func(w http.ResponseWriter, r *http.Request) { obj, err := fn(r); reply(w, 200, obj, err) })
+		mux.HandleFunc(method+" "+prefix+path, func(w http.ResponseWriter, r *http.Request) {
+			obj, err := fn(r)
+			n.recordManagement(r, path, err == nil)
+			reply(w, 200, obj, err)
+		})
 	}
 	add("GET", "server/status", func(_ *http.Request) (any, error) { return n.Status(), nil })
 	add("GET", "inbounds/list", func(_ *http.Request) (any, error) { return n.Inbounds(), nil })

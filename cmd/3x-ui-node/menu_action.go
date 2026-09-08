@@ -12,6 +12,10 @@ import (
 func menuAction(choice, configPath string, c node.Config, reader *bufio.Reader, out io.Writer) error {
 	var err error
 	switch choice {
+	case "15":
+		return runDoctor(configPath, false, reader, out)
+	case "16":
+		return runDoctor(configPath, true, reader, out)
 	case "1":
 		err = showStatus(out, c)
 	case "2":

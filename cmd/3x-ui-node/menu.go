@@ -34,8 +34,9 @@ type serverStatus struct {
 		Up   uint64 `json:"up"`
 		Down uint64 `json:"down"`
 	} `json:"netIO"`
-	Uptime uint64 `json:"uptime"`
-	Xray   struct {
+	Uptime             uint64                   `json:"uptime"`
+	ManagementActivity *node.ManagementActivity `json:"managementActivity"`
+	Xray               struct {
 		State    string `json:"state"`
 		ErrorMsg string `json:"errorMsg"`
 		Version  string `json:"version"`
@@ -124,7 +125,7 @@ func showStatus(w io.Writer, c node.Config) error {
 	fmt.Fprintf(w, "Xray        %s (%s)\n", status.Xray.State, status.Xray.Version)
 	fmt.Fprintf(w, "CPU         %.1f%%\n", status.CPU)
 	fmt.Fprintf(w, "内存        %s / %s\n", bytes(status.Mem.Current), bytes(status.Mem.Total))
-	fmt.Fprintf(w, "网络累计    ↑ %s  ↓ %s\n", bytes(status.NetIO.Up), bytes(status.NetIO.Down))
+	fmt.Fprintf(w, "网络速率    ↑ %s/s  ↓ %s/s\n", bytes(status.NetIO.Up), bytes(status.NetIO.Down))
 	fmt.Fprintf(w, "运行时间    %s\n", (time.Duration(status.Uptime) * time.Second).Round(time.Second))
 	if status.Xray.ErrorMsg != "" {
 		fmt.Fprintf(w, "Xray 错误   %s\n", status.Xray.ErrorMsg)
@@ -464,7 +465,7 @@ func showLogs(c node.Config, out io.Writer) error {
 }
 
 func menuHelp(w io.Writer) {
-	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client]")
+	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client|doctor]")
 	fmt.Fprintln(w, "不带子命令时进入 TUI：↑↓ 选择，Enter 打开，Esc 返回，q 退出。")
 	fmt.Fprintln(w, "非终端或 TERM=dumb 使用数字菜单；13 为手动添加客户端。")
 }
@@ -472,6 +473,8 @@ func menuHelp(w io.Writer) {
 func runMenu(configPath string, c node.Config, args []string, in io.Reader, out io.Writer) error {
 	show := func(command string) error {
 		switch command {
+		case "doctor":
+			return runDoctor(configPath, false, in, out)
 		case "status":
 			return showStatus(out, c)
 		case "inbounds":
@@ -513,8 +516,9 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 		fmt.Fprintln(out, "║  9) 重启服务      10) 查看日志                ║")
 		fmt.Fprintln(out, "║ 11) 默认客户端    12) 设置默认客户端           ║")
 		fmt.Fprintln(out, "║ 13) 手动添加客户端 14) 删除客户端              ║")
+		fmt.Fprintln(out, "║ 15) 系统体检      16) 体检与修复              ║")
 		fmt.Fprintln(out, "╚══════════════════════════════════════════════╝")
-		fmt.Fprint(out, "请输入选项 [0-14]: ")
+		fmt.Fprint(out, "请输入选项 [0-16]: ")
 		choice, err := reader.ReadString('\n')
 		if err != nil && len(choice) == 0 {
 			return nil

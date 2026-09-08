@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	stdbytes "bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,8 @@ var menuEntries = []menuEntry{
 	{id: "4", group: "诊断", title: "监听端口", hint: "检查本机管理与业务监听"},
 	{id: "5", group: "诊断", title: "Xray 错误", hint: "查看核心错误信息"},
 	{id: "10", group: "诊断", title: "运行日志", hint: "查看最近 80 行日志"},
+	{id: "15", group: "诊断", title: "系统体检", hint: "检查节点环境、配置、服务与资源"},
+	{id: "16", group: "诊断", title: "体检与修复", hint: "逐项确认权限修复，记录原权限并复查", interactive: true},
 	{id: "6", group: "配置", title: "连接凭据", hint: "查看节点 Token 与证书指纹"},
 	{id: "11", group: "配置", title: "默认客户端", hint: "查看默认客户端配置"},
 	{id: "12", group: "配置", title: "设置默认客户端", hint: "保存默认客户端，重启后生效", interactive: true},
@@ -124,6 +127,7 @@ const (
 	kindItem
 	kindSelected
 	kindText
+	kindAccent
 )
 
 type terminalRow struct {
@@ -133,8 +137,8 @@ type terminalRow struct {
 
 func (r terminalRow) sequence() string {
 	switch r.kind {
-	case kindLogo:
-		return "\x1b[1;32m"
+	case kindLogo, kindAccent:
+		return "\x1b[1;38;2;12;245;184m"
 	case kindCaption, kindGroup:
 		return "\x1b[2m"
 	case kindSelected:
@@ -261,6 +265,14 @@ func renderTerminalMenu(out io.Writer, width, height, selected, offset int, line
 	if lines != nil {
 		body = resultRows(width, height, offset, lines, title)
 		footer = []terminalRow{{}, {text: "↑↓ 滚动 · g/G 首尾 · Esc 返回", kind: kindCaption}}
+		if title == "实时服务状态" {
+			for i := range body {
+				if strings.ContainsAny(body[i].text, "━▁▂▃▄▅▆▇█") {
+					body[i].kind = kindAccent
+				}
+			}
+			footer = []terminalRow{{}, {text: "p 暂停/继续 · r 刷新 · ↑↓ 滚动 · Esc 返回", kind: kindCaption}}
+		}
 	} else {
 		body = menuBodyRows(width, height, selected)
 		footer = []terminalRow{
@@ -380,20 +392,72 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	width, height := 0, 0
+	var dashboard *statusDashboard
+	var cancelStatus context.CancelFunc
+	defer func() {
+		if cancelStatus != nil {
+			cancelStatus()
+		}
+	}()
+	updates := make(chan statusUpdate, 1)
+	generation := 0
+	busy := false
+	var nextUpdate time.Time
+	requestStatus := func() {
+		if dashboard == nil || busy {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		cancelStatus = cancel
+		busy = true
+		g, config := generation, c
+		go func() {
+			defer cancel()
+			s, err := fetchDashboardStatus(ctx, config)
+			select {
+			case updates <- statusUpdate{generation: g, status: s, err: err}:
+			case <-done:
+			}
+		}()
+	}
+	frame := &terminalFrameWriter{out: out}
 	draw := func() {
+		oldWidth, oldHeight := width, height
 		width, height, _ = term.GetSize(int(output.Fd()))
 		if width == 0 {
 			width, height = 80, 24
 		}
-		renderTerminalMenu(out, width, height, selected, offset, lines, title)
+		if width != oldWidth || height != oldHeight {
+			frame.previous = nil
+		}
+		if dashboard != nil {
+			lines = dashboard.lines(width, busy, time.Now())
+		}
+		renderTerminalMenu(frame, width, height, selected, offset, lines, title)
+		frame.flush()
 	}
 	draw()
 	for {
 		var key byte
 		select {
+		case update := <-updates:
+			if dashboard != nil && update.generation == generation {
+				busy = false
+				dashboard.accept(update.status, update.err, time.Now())
+				nextUpdate = time.Now().Add(2 * time.Second)
+				draw()
+			}
+			continue
 		case <-sigs:
 			return nil
 		case <-ticker.C:
+			if dashboard != nil {
+				if !dashboard.paused && !busy && !time.Now().Before(nextUpdate) {
+					requestStatus()
+				}
+				draw()
+				continue
+			}
 			w, h, _ := term.GetSize(int(output.Fd()))
 			if w != width || h != height {
 				draw()
@@ -441,6 +505,12 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 			last := max(0, len(lines)-page)
 			switch key {
 			case 'q', 27, '\r', '\n':
+				if cancelStatus != nil {
+					cancelStatus()
+				}
+				dashboard = nil
+				generation++
+				busy = false
 				lines = nil
 				offset = 0
 			case 'j':
@@ -455,6 +525,12 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 				offset = 0
 			case 'G':
 				offset = last
+			case 'p':
+				if dashboard != nil {
+					dashboard.paused = !dashboard.paused
+				}
+			case 'r':
+				requestStatus()
 			}
 			draw()
 			continue
@@ -477,7 +553,16 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 				continue
 			}
 			c = fresh
+			if entry.id == "1" {
+				dashboard = &statusDashboard{}
+				title = "实时服务状态"
+				generation++
+				requestStatus()
+				draw()
+				continue
+			}
 			if entry.interactive {
+				frame.previous = nil
 				term.Restore(fd, original)
 				fmt.Fprint(out, "\x1b[H\x1b[2J\x1b[?25h")
 				fmt.Fprintln(out, "3X NODE / "+entry.title)
@@ -506,6 +591,7 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 				}
 				fmt.Fprint(out, "\x1b[?25l")
 			} else {
+				frame.previous = nil
 				var b stdbytes.Buffer
 				fmt.Fprint(out, "\x1b[H\x1b[2J正在读取…\r\n")
 				if e := menuAction(entry.id, configPath, c, reader, &b); e != nil {

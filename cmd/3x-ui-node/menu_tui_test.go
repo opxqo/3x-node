@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var sgr = strings.NewReplacer("\x1b[1;32m", "", "\x1b[2m", "", "\x1b[7m", "", "\x1b[0m", "")
+var sgr = strings.NewReplacer("\x1b[1;38;2;12;245;184m", "", "\x1b[2m", "", "\x1b[7m", "", "\x1b[0m", "")
 
 func renderRows(t *testing.T, width, height, selected, offset int, lines []string, title string) []string {
 	t.Helper()

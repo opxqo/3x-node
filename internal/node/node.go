@@ -21,6 +21,7 @@ type Node struct {
 	started    time.Time
 	save       func(string, *State) error
 	metrics    Metrics
+	management ManagementActivity
 	halted     bool
 }
 

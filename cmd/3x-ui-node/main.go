@@ -43,12 +43,22 @@ func run() error {
 	listen := f.String("listen", "0.0.0.0:2053", "HTTPS bind address for init")
 	state := f.String("state", "/var/lib/3x-ui-node/state.json", "state path for init")
 	xray := f.String("xray", "/usr/local/lib/3x-ui-node/xray", "Xray binary for init")
+	var fix bool
+	if command == "doctor" {
+		f.BoolVar(&fix, "fix", false, "confirm and repair supported issues, then recheck")
+	}
 	if err := f.Parse(args); err != nil {
 		return err
 	}
 	if command == "version" {
 		fmt.Println(node.Version)
 		return nil
+	}
+	if command == "doctor" {
+		if len(f.Args()) != 0 {
+			return fmt.Errorf("usage: 3x-ui-node doctor [-config PATH] [--fix]")
+		}
+		return runDoctor(*path, fix, os.Stdin, os.Stdout)
 	}
 	if command == "init" {
 		c, err := node.InitConfig(*path, *listen, *state, *xray)
@@ -105,7 +115,7 @@ func run() error {
 		return runMenu(*path, c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, status, menu, credentials, rotate-token, default-client, version")
+		return fmt.Errorf("commands: init, serve, check, doctor, status, menu, credentials, rotate-token, default-client, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)

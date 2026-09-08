@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.15-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.16-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
@@ -47,12 +47,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.15-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.16-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.15-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.16-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -69,6 +69,8 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 ## 主面板接入与 NAT
 
+源码新增接入反馈（尚未发版）：TUI「服务状态」的「主面板接入」区域显示最近远程认证请求、成功配置下发时间及各自直连来源 IP。共享 Token 不提供唯一主面板身份，故该反馈不能证明绑定归属；其他持有 Token 的远程工具也会留下记录。仅已认证且命中节点 API 的请求会记录；本机回环查询、未授权访问不记录，不信任 X-Forwarded-For。只有入站/客户端配置修改成功才更新下发时间，查询、流量统计推送和失败写入不会更新。数据仅保留在内存，节点重启后重新观察；未观察到请求或长时间未请求不等于解绑。反向代理/NAT 下来源 IP 可能是代理地址，本地反代的回环请求不会记录。
+
 添加节点时选择 HTTPS，地址填写公网管理入口，端口填写其**公网映射端口**。
 认证使用 `credentials` 显示的 Bearer Token，TLS 模式选择证书指纹固定并录入 TLS SHA256。
 `basePath` 默认 `/`；修改配置后执行 `rc-service 3x-ui-node restart`。
@@ -81,6 +83,18 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 ## 命令和升级
 
+### 系统体检
+
+```sh
+3x-ui-node doctor
+3x-ui-node doctor --fix
+3x-ui-node doctor -config /absolute/path/config.json
+```
+
+`doctor` 输出 PASS、WARN、FAIL 与需外部验证的 MANUAL 项；存在 FAIL 时退出码为 1，否则为 0。即使配置损坏也可从命令行启动。检查配置、状态文件、敏感文件权限、TLS 有效期、本地认证 API、Xray 状态、OpenRC/PID、内部 API 监听、数据目录磁盘及可读取的 cgroup/OOM 信息。公网端口映射必须从外部验证。TUI 的诊断分组和数字菜单 15/16 提供检查与修复入口。
+
+`--fix` 目前仅修复敏感普通文件权限为 0600，每项展示方案并要求 y/yes 确认，默认不执行。修改前在同目录创建 0600 的 `.doctor-permissions-*.json` 原路径/权限记录，不复制秘密内容；拒绝符号链接、硬链接和非当前用户所有的文件，结束后重新检查。必要时管理员可按记录人工恢复原权限。服务重启、PID 清理、系统依赖、证书更换、网络和 OOM 不自动修复，避免误处理容器系统状态；WARN 不代表必须修改系统。该命令不增加后台任务，也不会上传诊断数据。
+
 `init` 初始化（拒绝覆盖）；`check` 校验本地配置；`status` 查询本地 HTTPS API；
 `credentials` 显示接入信息；`rotate-token` 原子替换令牌，随后需要重启服务及更新主面板令牌。
 所有命令支持 `-config /absolute/path/config.json`。
@@ -91,7 +105,9 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
 
-TUI 只在菜单打开时运行，不增加节点后台任务，也不定时请求 API。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。该菜单改动已包含在 `0.1.15-node` 安装包中。
+TUI 只在菜单打开时运行，不增加节点后台任务。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。基础菜单已包含在 `0.1.16-node` 安装包中。
+
+源码新增实时状态仪表盘（尚未发版）：服务状态页每 2 秒请求一次本地 API，显示 CPU/内存占用条、最近 30 次成功采样的趋势与网络收发速率（B/s，非累计流量）。CPU 来自系统采样，内存优先使用容器限制与用量，不代表单个节点进程占用。仅页面打开时采样，`p` 暂停/继续，`r` 手动刷新，返回或退出会取消请求；请求失败保留上次数据并标记过期。布局宽屏双栏、窄屏单栏，趋势刻度固定 0–100%，只重绘变化行以减少闪烁。Logo 使用 true-color `#0CF5B8`，需要终端支持 24 位颜色。
 
 ```sh
 # 交互菜单：状态、入站、客户端流量、监听端口和 Xray 错误
@@ -126,7 +142,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.15-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.16-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
