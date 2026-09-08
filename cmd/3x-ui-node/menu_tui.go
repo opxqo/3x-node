@@ -25,7 +25,7 @@ type menuEntry struct {
 
 var menuEntries = []menuEntry{
 	{id: "1", group: "概览", title: "服务状态", hint: "查看 CPU、内存与 Xray 状态"},
-	{id: "2", group: "概览", title: "入站列表", hint: "查看协议、端口和启用状态"},
+	{id: "2", group: "概览", title: "入站列表", hint: "Enter 查看单个入站的完整配置"},
 	{id: "3", group: "概览", title: "客户端与流量", hint: "查看客户端及上传下载统计"},
 	{id: "4", group: "诊断", title: "监听端口", hint: "检查本机管理与业务监听"},
 	{id: "5", group: "诊断", title: "Xray 错误", hint: "查看核心错误信息"},
@@ -229,7 +229,11 @@ func resultRows(width, height, offset int, lines []string, title string) []termi
 	}
 	rows := []terminalRow{{text: head, kind: kindGroup}}
 	for _, s := range lines[start:end] {
-		rows = append(rows, terminalRow{text: "  " + s, kind: kindText})
+		kind := kindText
+		if strings.HasPrefix(s, inboundCursor) {
+			kind = kindSelected
+		}
+		rows = append(rows, terminalRow{text: "  " + s, kind: kind})
 	}
 	return rows
 }
@@ -265,6 +269,9 @@ func renderTerminalMenu(out io.Writer, width, height, selected, offset int, line
 	if lines != nil {
 		body = resultRows(width, height, offset, lines, title)
 		footer = []terminalRow{{}, {text: "↑↓ 滚动 · g/G 首尾 · Esc 返回", kind: kindCaption}}
+		if title == "入站列表" {
+			footer = []terminalRow{{}, {text: "↑↓ 选择 · Enter 查看详情 · Esc 返回", kind: kindCaption}}
+		}
 		if title == "实时服务状态" {
 			for i := range body {
 				if strings.ContainsAny(body[i].text, "━▁▂▃▄▅▆▇█") {
@@ -393,6 +400,7 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 	defer ticker.Stop()
 	width, height := 0, 0
 	var dashboard *statusDashboard
+	var browser *inboundBrowser
 	var cancelStatus context.CancelFunc
 	defer func() {
 		if cancelStatus != nil {
@@ -503,12 +511,19 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 		if lines != nil {
 			page := resultViewport(max(20, width-1), max(6, height), len(lines))
 			last := max(0, len(lines)-page)
+			if browser != nil && browser.key(key) {
+				title, lines = browser.title(), browser.lines()
+				offset = browser.follow(page)
+				draw()
+				continue
+			}
 			switch key {
 			case 'q', 27, '\r', '\n':
 				if cancelStatus != nil {
 					cancelStatus()
 				}
 				dashboard = nil
+				browser = nil
 				generation++
 				busy = false
 				lines = nil
@@ -553,6 +568,18 @@ func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writ
 				continue
 			}
 			c = fresh
+			if entry.id == "2" {
+				b, e := newInboundBrowser(c)
+				if e != nil {
+					lines = []string{"读取入站失败: " + e.Error()}
+					draw()
+					continue
+				}
+				browser = b
+				title, lines, offset = browser.title(), browser.lines(), 0
+				draw()
+				continue
+			}
 			if entry.id == "1" {
 				dashboard = &statusDashboard{}
 				title = "实时服务状态"
