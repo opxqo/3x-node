@@ -465,7 +465,8 @@ func showLogs(c node.Config, out io.Writer) error {
 
 func menuHelp(w io.Writer) {
 	fmt.Fprintln(w, "用法: 3x-ui-node menu [status|inbounds|clients|ports|errors|add-client]")
-	fmt.Fprintln(w, "不带子命令时进入交互菜单；13 为手动添加客户端。")
+	fmt.Fprintln(w, "不带子命令时进入 TUI：↑↓ 选择，Enter 打开，Esc 返回，q 退出。")
+	fmt.Fprintln(w, "非终端或 TERM=dumb 使用数字菜单；13 为手动添加客户端。")
 }
 
 func runMenu(configPath string, c node.Config, args []string, in io.Reader, out io.Writer) error {
@@ -495,6 +496,9 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 		return show(args[0])
 	}
 
+	if terminalMenuAvailable(in, out) {
+		return runTerminalMenu(configPath, c, in, out)
+	}
 	reader := bufio.NewReader(in)
 	for {
 		fmt.Fprintln(out, "\n╔══════════════════════════════════════════════╗")
@@ -515,52 +519,12 @@ func runMenu(configPath string, c node.Config, args []string, in io.Reader, out 
 		if err != nil && len(choice) == 0 {
 			return nil
 		}
-		switch strings.TrimSpace(choice) {
-		case "1":
-			err = show("status")
-		case "2":
-			err = show("inbounds")
-		case "3":
-			err = show("clients")
-		case "4":
-			err = show("ports")
-		case "5":
-			err = show("errors")
-		case "6":
-			pin, pinErr := node.Fingerprint(c)
-			if pinErr != nil {
-				err = pinErr
-				break
-			}
-			fmt.Fprintf(out, "\nAPI token: %s\nTLS SHA256: %s\nListen: %s\nBase path: %s\n", c.Token, pin, c.Listen, c.BasePath)
-		case "7":
-			err = serviceAction("start", out)
-		case "8":
-			var confirm string
-			confirm, err = prompt(reader, out, "停止会中断节点连接，确认停止？y/n", "n")
-			if err == nil && (strings.EqualFold(confirm, "y") || strings.EqualFold(confirm, "yes")) {
-				err = serviceAction("stop", out)
-			}
-		case "9":
-			err = serviceAction("restart", out)
-		case "10":
-			err = showLogs(c, out)
-		case "11":
-			showDefaultClient(out, c)
-		case "12":
-			err = configureDefaultClient(configPath, c, reader, out)
-		case "13":
-			err = addClientInteractive(c, reader, out)
-		case "14":
-			err = deleteClientInteractive(c, reader, out)
-		case "0", "q", "Q":
+		if strings.TrimSpace(choice) == "0" || strings.EqualFold(strings.TrimSpace(choice), "q") {
 			return nil
-		default:
-			fmt.Fprintln(out, "无效选择。")
-			continue
 		}
+		err = menuAction(strings.TrimSpace(choice), configPath, c, reader, out)
 		if err != nil {
-			fmt.Fprintf(out, "查询失败: %v\n", err)
+			fmt.Fprintf(out, "操作失败: %v\n", err)
 		}
 	}
 }

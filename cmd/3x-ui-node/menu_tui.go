@@ -1,0 +1,520 @@
+package main
+
+import (
+	"bufio"
+	stdbytes "bytes"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+	"unicode"
+
+	"github.com/mhsanaei/3x-ui/v3/internal/node"
+	"golang.org/x/term"
+)
+
+type menuEntry struct {
+	id, group, title, hint string
+	interactive            bool
+}
+
+var menuEntries = []menuEntry{
+	{id: "1", group: "概览", title: "服务状态", hint: "查看 CPU、内存与 Xray 状态"},
+	{id: "2", group: "概览", title: "入站列表", hint: "查看协议、端口和启用状态"},
+	{id: "3", group: "概览", title: "客户端与流量", hint: "查看客户端及上传下载统计"},
+	{id: "4", group: "诊断", title: "监听端口", hint: "检查本机管理与业务监听"},
+	{id: "5", group: "诊断", title: "Xray 错误", hint: "查看核心错误信息"},
+	{id: "10", group: "诊断", title: "运行日志", hint: "查看最近 80 行日志"},
+	{id: "6", group: "配置", title: "连接凭据", hint: "查看节点 Token 与证书指纹"},
+	{id: "11", group: "配置", title: "默认客户端", hint: "查看默认客户端配置"},
+	{id: "12", group: "配置", title: "设置默认客户端", hint: "保存默认客户端，重启后生效", interactive: true},
+	{id: "13", group: "配置", title: "添加客户端", hint: "交互填写客户端并确认添加", interactive: true},
+	{id: "14", group: "配置", title: "删除客户端", hint: "按名称删除，执行前确认", interactive: true},
+	{id: "7", group: "服务", title: "启动服务", hint: "启动节点服务"},
+	{id: "8", group: "服务", title: "停止服务", hint: "会中断节点连接，执行前确认", interactive: true},
+	{id: "9", group: "服务", title: "重启服务", hint: "会中断节点连接，执行前确认", interactive: true},
+}
+
+var wordmark = []string{
+	"██████╗ ██╗  ██╗   ███╗   ██╗ ██████╗ ██████╗ ███████╗",
+	"╚════██╗╚██╗██╔╝   ████╗  ██║██╔═══██╗██╔══██╗██╔════╝",
+	" █████╔╝ ╚███╔╝    ██╔██╗ ██║██║   ██║██║  ██║█████╗  ",
+	" ╚═══██╗ ██╔██╗    ██║╚██╗██║██║   ██║██║  ██║██╔══╝  ",
+	"██████╔╝██╔╝ ██╗   ██║ ╚████║╚██████╔╝██████╔╝███████╗",
+	"╚═════╝ ╚═╝  ╚═╝   ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚══════╝",
+}
+
+const (
+	menuMinBlock = 34
+	menuFooter   = 3
+)
+
+func terminalMenuAvailable(in io.Reader, out io.Writer) bool {
+	i, iok := in.(*os.File)
+	o, ook := out.(*os.File)
+	return iok && ook && os.Getenv("TERM") != "dumb" && os.Getenv("TERM") != "" && term.IsTerminal(int(i.Fd())) && term.IsTerminal(int(o.Fd()))
+}
+
+// Remove terminal controls from API and log text before rendering it.
+func safeTerminalText(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '\t' {
+			return ' '
+		}
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
+func terminalRuneWidth(r rune) int {
+	if unicode.Is(unicode.Mn, r) || r == 0 {
+		return 0
+	}
+	if r < 0x1100 {
+		return 1
+	}
+	if r <= 0x115f || r == 0x2329 || r == 0x232a ||
+		(r >= 0x2e80 && r <= 0x303e) ||
+		(r >= 0x3040 && r <= 0xa4cf) ||
+		(r >= 0xac00 && r <= 0xd7a3) ||
+		(r >= 0xf900 && r <= 0xfaff) ||
+		(r >= 0xfe10 && r <= 0xfe6f) ||
+		(r >= 0xff00 && r <= 0xff60) ||
+		(r >= 0xffe0 && r <= 0xffe6) ||
+		(r >= 0x1f300 && r <= 0x1faff) {
+		return 2
+	}
+	return 1
+}
+
+func terminalClip(s string, width int) string {
+	var b strings.Builder
+	for _, r := range safeTerminalText(s) {
+		n := terminalRuneWidth(r)
+		if width < n {
+			break
+		}
+		width -= n
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func terminalDisplayWidth(s string) int {
+	width := 0
+	for _, r := range safeTerminalText(s) {
+		width += terminalRuneWidth(r)
+	}
+	return width
+}
+
+type rowKind uint8
+
+const (
+	kindBlank rowKind = iota
+	kindLogo
+	kindCaption
+	kindGroup
+	kindItem
+	kindSelected
+	kindText
+)
+
+type terminalRow struct {
+	text string
+	kind rowKind
+}
+
+func (r terminalRow) sequence() string {
+	switch r.kind {
+	case kindLogo:
+		return "\x1b[1;32m"
+	case kindCaption, kindGroup:
+		return "\x1b[2m"
+	case kindSelected:
+		return "\x1b[7m"
+	}
+	return ""
+}
+
+// Centered rows follow the screen, block rows follow the shared content column.
+func (r terminalRow) centered() bool {
+	return r.kind == kindLogo || r.kind == kindCaption
+}
+
+func logoTiers(width int) [][]terminalRow {
+	caption := terminalRow{text: "节点管理 · " + node.Version, kind: kindCaption}
+	tiers := make([][]terminalRow, 0, 4)
+	if width >= terminalDisplayWidth(wordmark[0])+2 {
+		rows := make([]terminalRow, 0, len(wordmark)+1)
+		for _, line := range wordmark {
+			rows = append(rows, terminalRow{text: line, kind: kindLogo})
+		}
+		tiers = append(tiers, append(rows, caption))
+	}
+	tiers = append(tiers, []terminalRow{{text: "3 X   N O D E", kind: kindLogo}, caption})
+	return append(tiers, []terminalRow{{text: "3X NODE · " + node.Version, kind: kindLogo}})
+}
+
+// The logo shrinks before the content does, so a short terminal keeps every row.
+func terminalLayout(width, height, want int) ([]terminalRow, int) {
+	tiers := logoTiers(width)
+	for _, tier := range tiers {
+		if height-len(tier)-1-menuFooter >= want {
+			return tier, want
+		}
+	}
+	// Nothing fits: keep the one-line banner and scroll, unless the terminal is tiny.
+	fallback := tiers[len(tiers)-1]
+	if height < 10 {
+		fallback = nil
+	}
+	return fallback, max(1, height-len(fallback)-1-menuFooter)
+}
+
+type menuRow struct {
+	text  string
+	entry int
+}
+
+// Group headers are rows without an entry, so navigation skips them for free.
+func menuRows() []menuRow {
+	rows := make([]menuRow, 0, len(menuEntries)+4)
+	group := ""
+	for i, e := range menuEntries {
+		if e.group != group {
+			group = e.group
+			rows = append(rows, menuRow{text: e.group, entry: -1})
+		}
+		rows = append(rows, menuRow{text: e.title, entry: i})
+	}
+	return rows
+}
+
+func menuRowOf(selected int) int {
+	for i, r := range menuRows() {
+		if r.entry == selected {
+			return i
+		}
+	}
+	return 0
+}
+
+// Both the renderer and the key handler size the result viewport here.
+func resultViewport(width, height, lines int) int {
+	_, capacity := terminalLayout(width, height, lines+1)
+	return max(1, capacity-1)
+}
+
+func resultRows(width, height, offset int, lines []string, title string) []terminalRow {
+	view := resultViewport(width, height, len(lines))
+	start := 0
+	if len(lines) > view {
+		start = min(max(0, offset), len(lines)-view)
+	}
+	end := min(len(lines), start+view)
+	head := title
+	if len(lines) > view {
+		head = fmt.Sprintf("%s  %d-%d/%d", title, start+1, end, len(lines))
+	}
+	rows := []terminalRow{{text: head, kind: kindGroup}}
+	for _, s := range lines[start:end] {
+		rows = append(rows, terminalRow{text: "  " + s, kind: kindText})
+	}
+	return rows
+}
+
+func menuBodyRows(width, height, selected int) []terminalRow {
+	all := menuRows()
+	_, capacity := terminalLayout(width, height, len(all))
+	start := 0
+	if len(all) > capacity {
+		start = min(max(0, menuRowOf(selected)-capacity/2), len(all)-capacity)
+	}
+	rows := make([]terminalRow, 0, capacity)
+	for _, r := range all[start:min(len(all), start+capacity)] {
+		switch {
+		case r.entry < 0:
+			rows = append(rows, terminalRow{text: r.text, kind: kindGroup})
+		case r.entry == selected:
+			rows = append(rows, terminalRow{text: "  ▸ " + r.text, kind: kindSelected})
+		default:
+			rows = append(rows, terminalRow{text: "    " + r.text, kind: kindItem})
+		}
+	}
+	return rows
+}
+
+func renderTerminalMenu(out io.Writer, width, height, selected, offset int, lines []string, title string) {
+	width = max(20, width-1)
+	height = max(6, height)
+	selected = min(max(0, selected), len(menuEntries)-1)
+
+	var body []terminalRow
+	var footer []terminalRow
+	if lines != nil {
+		body = resultRows(width, height, offset, lines, title)
+		footer = []terminalRow{{}, {text: "↑↓ 滚动 · g/G 首尾 · Esc 返回", kind: kindCaption}}
+	} else {
+		body = menuBodyRows(width, height, selected)
+		footer = []terminalRow{
+			{},
+			{text: menuEntries[selected].hint, kind: kindCaption},
+			{text: "↑↓ 选择 · Enter 打开 · q 退出", kind: kindCaption},
+		}
+	}
+
+	logo, _ := terminalLayout(width, height, len(body))
+	rows := make([]terminalRow, 0, len(logo)+len(body)+len(footer)+1)
+	rows = append(rows, logo...)
+	if len(logo) > 0 {
+		rows = append(rows, terminalRow{})
+	}
+	rows = append(rows, body...)
+	rows = append(rows, footer...)
+
+	block := menuMinBlock
+	for _, r := range rows {
+		if !r.centered() {
+			block = max(block, terminalDisplayWidth(r.text)+2)
+		}
+	}
+	block = min(block, width)
+	for i, r := range rows {
+		if r.kind == kindGroup {
+			label := r.text + " "
+			rows[i].text = label + strings.Repeat("─", max(0, block-terminalDisplayWidth(label)))
+		}
+	}
+
+	blockPad := max(0, (width-block)/2)
+	fmt.Fprint(out, "\x1b[H\x1b[2J")
+	for i := 0; i < max(0, (height-len(rows))/2); i++ {
+		fmt.Fprint(out, "\r\n")
+	}
+	for _, r := range rows {
+		text, pad := terminalClip(r.text, block), blockPad
+		if r.centered() {
+			text = terminalClip(r.text, width)
+			pad = max(0, (width-terminalDisplayWidth(text))/2)
+		}
+		if r.kind == kindSelected {
+			text += strings.Repeat(" ", max(0, block-terminalDisplayWidth(text)))
+		}
+		fmt.Fprint(out, strings.Repeat(" ", pad))
+		if seq := r.sequence(); seq != "" {
+			fmt.Fprint(out, seq, text, "\x1b[0m")
+		} else {
+			fmt.Fprint(out, text)
+		}
+		fmt.Fprint(out, "\r\n")
+	}
+}
+
+// One input owner is shared by navigation and the existing canonical-mode forms.
+type terminalInput struct {
+	keys    <-chan byte
+	signals <-chan os.Signal
+}
+
+func (r terminalInput) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	select {
+	case b, ok := <-r.keys:
+		if !ok {
+			return 0, io.EOF
+		}
+		p[0] = b
+		return 1, nil
+	case <-r.signals:
+		return 0, io.EOF
+	}
+}
+
+func runTerminalMenu(configPath string, c node.Config, in io.Reader, out io.Writer) error {
+	input := in.(*os.File)
+	output := out.(*os.File)
+	fd := int(input.Fd())
+	original, err := term.MakeRaw(fd)
+	if err != nil {
+		return err
+	}
+	defer term.Restore(fd, original)
+	fmt.Fprint(out, "\x1b[?1049h\x1b[?25l")
+	defer fmt.Fprint(out, "\x1b[0m\x1b[?25h\x1b[?1049l")
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer signal.Stop(sigs)
+	keys := make(chan byte, 64)
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		defer close(keys)
+		var b [1]byte
+		for {
+			n, e := input.Read(b[:])
+			if n > 0 {
+				select {
+				case keys <- b[0]:
+				case <-done:
+					return
+				}
+			}
+			if e != nil {
+				return
+			}
+		}
+	}()
+	reader := bufio.NewReader(terminalInput{keys, sigs})
+	selected, offset := 0, 0
+	var lines []string
+	title := ""
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+	width, height := 0, 0
+	draw := func() {
+		width, height, _ = term.GetSize(int(output.Fd()))
+		if width == 0 {
+			width, height = 80, 24
+		}
+		renderTerminalMenu(out, width, height, selected, offset, lines, title)
+	}
+	draw()
+	for {
+		var key byte
+		select {
+		case <-sigs:
+			return nil
+		case <-ticker.C:
+			w, h, _ := term.GetSize(int(output.Fd()))
+			if w != width || h != height {
+				draw()
+			}
+			continue
+		case b, ok := <-keys:
+			if !ok {
+				return nil
+			}
+			key = b
+		}
+		if key == 27 {
+			// A standalone Escape returns immediately after a short sequence timeout.
+			timer := time.NewTimer(60 * time.Millisecond)
+			select {
+			case next := <-keys:
+				if next == '[' || next == 'O' {
+					select {
+					case next = <-keys:
+						switch next {
+						case 'A':
+							key = 'k'
+						case 'B':
+							key = 'j'
+						case '5':
+							key = 'b'
+						case '6':
+							key = ' '
+						default:
+							key = 0
+						}
+					case <-timer.C:
+						key = 27
+					}
+				}
+			case <-timer.C:
+			}
+			timer.Stop()
+		}
+		if key == 3 || key == 4 {
+			return nil
+		}
+		if lines != nil {
+			page := resultViewport(max(20, width-1), max(6, height), len(lines))
+			last := max(0, len(lines)-page)
+			switch key {
+			case 'q', 27, '\r', '\n':
+				lines = nil
+				offset = 0
+			case 'j':
+				offset = min(last, offset+1)
+			case 'k':
+				offset = max(0, offset-1)
+			case ' ':
+				offset = min(last, offset+page)
+			case 'b':
+				offset = max(0, offset-page)
+			case 'g':
+				offset = 0
+			case 'G':
+				offset = last
+			}
+			draw()
+			continue
+		}
+		switch key {
+		case 'q':
+			return nil
+		case 'k':
+			selected = (selected + len(menuEntries) - 1) % len(menuEntries)
+		case 'j', '\t':
+			selected = (selected + 1) % len(menuEntries)
+		case '\r', '\n':
+			entry := menuEntries[selected]
+			title = entry.title
+			// Always load current config; editing defaults must not leave stale values.
+			fresh, e := node.LoadConfig(configPath)
+			if e != nil {
+				lines = []string{"读取配置失败: " + e.Error()}
+				draw()
+				continue
+			}
+			c = fresh
+			if entry.interactive {
+				term.Restore(fd, original)
+				fmt.Fprint(out, "\x1b[H\x1b[2J\x1b[?25h")
+				fmt.Fprintln(out, "3X NODE / "+entry.title)
+				fmt.Fprintln(out)
+				if entry.id == "9" {
+					answer, e := prompt(reader, out, "重启会中断节点连接，确认重启？y/n", "n")
+					if e == nil && strings.EqualFold(answer, "y") {
+						err = serviceAction("restart", out)
+					} else {
+						err = e
+					}
+				} else {
+					err = menuAction(entry.id, configPath, c, reader, out)
+				}
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						return nil
+					}
+					fmt.Fprintf(out, "操作失败: %v\n", err)
+				}
+				if _, e := prompt(reader, out, "按 Enter 返回菜单", ""); e != nil {
+					return nil
+				}
+				if _, e := term.MakeRaw(fd); e != nil {
+					return e
+				}
+				fmt.Fprint(out, "\x1b[?25l")
+			} else {
+				var b stdbytes.Buffer
+				fmt.Fprint(out, "\x1b[H\x1b[2J正在读取…\r\n")
+				if e := menuAction(entry.id, configPath, c, reader, &b); e != nil {
+					fmt.Fprintf(&b, "操作失败: %v\n", e)
+				}
+				lines = strings.Split(strings.TrimSpace(b.String()), "\n")
+				offset = 0
+			}
+		}
+		draw()
+	}
+}

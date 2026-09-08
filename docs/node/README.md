@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.14-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.15-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
@@ -47,12 +47,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.14-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.15-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.14-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.15-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -87,6 +87,12 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 `menu` 提供与 `x-ui` 风格一致的分区管理菜单：状态、入站、客户端、日志、服务控制与默认客户端配置。`13` 是手动添加客户端，逐步询问入站 ID、UUID、名称和启用状态，并在写入前要求确认：
 
+源码中的新版交互菜单在支持 ANSI 的终端自动进入全屏 TUI。菜单按概览、诊断、配置、服务四组排列，每组一条分隔标题，选中项整行反显，底部显示该项说明与按键提示；`↑/↓` 或 `j/k` 选择，Enter 打开，`q` 退出。结果页用 `↑/↓` 滚动、空格与 `b` 翻页、`g`/`G` 跳到首尾，标题右侧显示当前行范围，Esc 返回。
+
+版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
+
+TUI 只在菜单打开时运行，不增加节点后台任务，也不定时请求 API。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。该菜单改动已包含在 `0.1.15-node` 安装包中。
+
 ```sh
 # 交互菜单：状态、入站、客户端流量、监听端口和 Xray 错误
 3x-ui-node menu
@@ -120,7 +126,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.14-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.15-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
