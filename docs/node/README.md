@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-ui/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.18-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.19-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时拒绝重复安装。升级使用同一命令，将末尾改为 `sh /root/install-node.sh upgrade`；
@@ -47,12 +47,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.18-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.19-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.18-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.19-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -103,6 +103,8 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 源码中的新版交互菜单在支持 ANSI 的终端自动进入全屏 TUI。菜单按概览、诊断、配置、服务四组排列，每组一条分隔标题，选中项整行反显，底部显示该项说明与按键提示；`↑/↓` 或 `j/k` 选择，Enter 打开，`q` 退出。结果页用 `↑/↓` 滚动、空格与 `b` 翻页、`g`/`G` 跳到首尾，标题右侧显示当前行范围，Esc 返回。
 
+入站列表是可选择的两级页面：`↑/↓` 或 `j/k` 移动光标（整行反显），Enter 打开该入站的详情，Esc 从详情退回列表、再按一次才回到主菜单。详情按基本、传输、REALITY 或 TLS、客户端分段列出监听地址、传输与安全、目标与 SNI、Short IDs、客户端 UUID 与 flow。REALITY 的公钥不读配置里存的 `settings.publicKey`，而是由节点上实际运行的 `privateKey` 现场推导——Xray 只用私钥认证、从不读那个字段，两者不一致时页面直接告警并给出客户端应当使用的 `pbk`。该页面自 `0.1.19-node` 起提供。
+
 版面随终端尺寸自适应：终端够高时显示 `3X NODE` 字符 Logo，否则依次降级为单行字标；内容块水平居中、整体垂直居中，窗口缩放时自动重绘，退出后恢复终端。停止、重启和客户端写操作保留确认；凭据仅在主动打开对应页面时显示。
 
 TUI 只在菜单打开时运行，不增加节点后台任务。非终端输入、输出重定向或 `TERM=dumb` 时使用原数字菜单；单项查询命令仍输出普通文本。基础菜单已包含在 `0.1.18-node` 安装包中。
@@ -142,7 +144,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.18-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.19-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。
