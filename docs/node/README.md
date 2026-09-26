@@ -30,7 +30,7 @@ VLESS 客户端新增/更新及整入站新增/更新统一忽略其他协议的
 apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercontent.com/opxqo/3x-node/main/install-node.sh -o /root/install-node.sh && sh /root/install-node.sh
 ```
 
-入口自动识别架构，下载 `v0.1.24-node`，验证脚本内固定 SHA256，安装并启动服务。
+入口自动识别架构，下载 `v0.1.25-node`，验证脚本内固定 SHA256，安装并启动服务。
 兼容 Alpine 默认的 `sh`，无需先安装 Bash；下载完整成功后才执行脚本。
 安装包暂存在 `/usr/local/lib`，避免占用可能为内存盘的 `/tmp`，结束后自动清理。
 已经安装时首次安装命令会拒绝执行；升级请显式传入 `upgrade`：
@@ -52,12 +52,12 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 sh scripts/node/build.sh
 ```
 
-生成 `dist/node/3x-ui-node-0.1.24-linux-{amd64,arm64}.tar.gz` 和 SHA256。
+生成 `dist/node/3x-ui-node-0.1.25-linux-{amd64,arm64}.tar.gz` 和 SHA256。
 构建下载固定 Xray 发布包并验证固定摘要，不附带 GeoIP/GeoSite。
 VPS 不安装编译器、Go、Node 或 Docker。下载发布包后只提取其中的安装脚本，避免在低内存容器中把整个包预解压一遍：
 
 ```sh
-PKG=/tmp/3x-ui-node-0.1.24-linux-amd64.tar.gz
+PKG=/tmp/3x-ui-node-0.1.25-linux-amd64.tar.gz
 DIR=$(mktemp -d /tmp/3x-ui-node-install.XXXXXX)
 tar -xzf "$PKG" -C "$DIR" install.sh
 cd "$DIR"
@@ -74,7 +74,7 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 
 ## 主面板接入与 NAT
 
-源码新增接入反馈（尚未发版）：TUI「服务状态」的「主面板接入」区域显示最近远程认证请求、成功配置下发时间及各自直连来源 IP。共享 Token 不提供唯一主面板身份，故该反馈不能证明绑定归属；其他持有 Token 的远程工具也会留下记录。仅已认证且命中节点 API 的请求会记录；本机回环查询、未授权访问不记录，不信任 X-Forwarded-For。只有入站/客户端配置修改成功才更新下发时间，查询、流量统计推送和失败写入不会更新。数据仅保留在内存，节点重启后重新观察；未观察到请求或长时间未请求不等于解绑。反向代理/NAT 下来源 IP 可能是代理地址，本地反代的回环请求不会记录。
+自 `0.1.24-node` 起提供接入反馈：TUI「服务状态」的「主面板接入」区域显示最近远程认证请求、成功配置下发时间及各自直连来源 IP。共享 Token 不提供唯一主面板身份，故该反馈不能证明绑定归属；其他持有 Token 的远程工具也会留下记录。仅已认证且命中节点 API 的请求会记录；本机回环查询、未授权访问不记录，不信任 X-Forwarded-For。只有入站/客户端配置修改成功才更新下发时间，查询、流量统计推送和失败写入不会更新。数据仅保留在内存，节点重启后重新观察；未观察到请求或长时间未请求不等于解绑。反向代理/NAT 下来源 IP 可能是代理地址，本地反代的回环请求不会记录。
 
 添加节点时选择 HTTPS，地址填写公网管理入口，端口填写其**公网映射端口**。
 认证使用 `credentials` 显示的 Bearer Token，TLS 模式选择证书指纹固定并录入 TLS SHA256。
@@ -85,6 +85,40 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 主面板节点管理地址使用公网地址与32053；VLESS 入站监听443；分享配置必须使用公网地址与32443。
 在主面板保留并设置 externalProxy/分享地址元数据，检查生成链接的地址和端口。
 管理端口和代理端口不可混用，容器的10.x地址不能作为公网分享入口。
+
+### 接入串（手动接入，自 0.1.25-node）
+
+`3x-ui-node credentials -blob` 输出一行以 `3xn1.` 开头的接入串，内容是 base64url 编码的 JSON（字段同下文注册请求，去掉 `code`）。
+节点不知道 NAT 映射后的公网端口，可用 `-public-url https://公网IP:映射端口` 把管理地址一并写入（字段 `url`，仅接受 HTTPS）；不写则在主面板补填。
+接入串包含 Token，只在本机终端查看，不要截图或公开。不带 `-blob` 时 `credentials` 输出不变。
+
+### 自动注册（自 0.1.25-node）
+
+主面板生成一次性注册码后，可在安装时直接完成接入：
+
+```sh
+sh /root/install-node.sh install --enroll-url https://主面板/注册地址 --enroll-code 注册码
+```
+
+安装流程与手动安装相同；服务就绪后执行 `3x-ui-node enroll -url URL -code CODE`，也可在已安装的节点上单独运行该命令。
+注册失败不回滚安装，按提示重试 `enroll`，或改用 `credentials` 手动接入。`upgrade` 不接受注册参数。
+
+注册请求为 `POST <url>`，`Content-Type: application/json`：
+
+| 字段 | 说明 |
+| --- | --- |
+| `code` | 一次性注册码，16–128 位 `A-Z a-z 0-9 _ -`，节点不保存 |
+| `token` | 节点管理 API 的 Bearer Token |
+| `certSha256` | 管理 API 证书 SHA256（Base64，与 `credentials` 相同） |
+| `listenPort` | 容器内管理端口；公网映射端口由主面板在生成注册码时记录 |
+| `basePath` | 管理 API 路径前缀，默认 `/` |
+| `version` / `xrayVersion` | 节点版本与 Xray 版本 |
+| `guid` | 节点状态文件中的实例标识 |
+
+响应沿用节点 API 的 `{"success":bool,"msg":string,"obj":any}`；非 2xx 或 `success=false` 视为失败并显示 `msg`。
+
+安全约束：注册地址必须是 HTTPS，用系统 CA 校验证书且不提供跳过校验的选项；不跟随重定向；地址不得包含用户名密码。
+节点不保存主面板地址或任何主面板凭据，注册只是一次性上报；之后仍由主面板主动连接节点。主面板应将注册码只存哈希、限时单次使用，并在管理员确认前保持连接停用。
 
 ## 命令和升级
 
@@ -101,7 +135,7 @@ sh ./install.sh install "$PKG" TRUSTED_SHA256
 `--fix` 目前仅修复敏感普通文件权限为 0600，每项展示方案并要求 y/yes 确认，默认不执行。修改前在同目录创建 0600 的 `.doctor-permissions-*.json` 原路径/权限记录，不复制秘密内容；拒绝符号链接、硬链接和非当前用户所有的文件，结束后重新检查。必要时管理员可按记录人工恢复原权限。服务重启、PID 清理、系统依赖、证书更换、网络和 OOM 不自动修复，避免误处理容器系统状态；WARN 不代表必须修改系统。该命令不增加后台任务，也不会上传诊断数据。
 
 `init` 初始化（拒绝覆盖）；`check` 校验本地配置；`status` 查询本地 HTTPS API；
-`credentials` 显示接入信息；`rotate-token` 原子替换令牌，随后需要重启服务及更新主面板令牌。
+`credentials` 显示接入信息（`-blob` 输出接入串）；`enroll` 向主面板一次性注册；`rotate-token` 原子替换令牌，随后需要重启服务及更新主面板令牌。
 所有命令支持 `-config /absolute/path/config.json`。
 
 `menu` 提供与 `x-ui` 风格一致的分区管理菜单：状态、入站、客户端、日志、服务控制与默认客户端配置。`13` 是手动添加客户端，逐步询问入站 ID、UUID、名称和启用状态，并在写入前要求确认：
@@ -151,7 +185,7 @@ rc-service 3x-ui-node restart
 ```
 
 ```sh
-sh install.sh upgrade ./3x-ui-node-0.1.24-linux-amd64.tar.gz TRUSTED_SHA256
+sh install.sh upgrade ./3x-ui-node-0.1.25-linux-amd64.tar.gz TRUSTED_SHA256
 ```
 
 升级停止服务后保留状态，切换 current 链接，启动失败回到原二进制。

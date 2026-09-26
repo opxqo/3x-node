@@ -43,9 +43,17 @@ func run() error {
 	listen := f.String("listen", "0.0.0.0:2053", "HTTPS bind address for init")
 	state := f.String("state", "/var/lib/3x-ui-node/state.json", "state path for init")
 	xray := f.String("xray", "/usr/local/lib/3x-ui-node/xray", "Xray binary for init")
-	var fix bool
-	if command == "doctor" {
+	var fix, blob bool
+	var enrollURL, enrollCode, publicURL string
+	switch command {
+	case "doctor":
 		f.BoolVar(&fix, "fix", false, "confirm and repair supported issues, then recheck")
+	case "enroll":
+		f.StringVar(&enrollURL, "url", "", "master enrollment URL (https)")
+		f.StringVar(&enrollCode, "code", "", "one-time enrollment code")
+	case "credentials":
+		f.BoolVar(&blob, "blob", false, "print one access string for pasting into the master")
+		f.StringVar(&publicURL, "public-url", "", "public https management address to embed in the blob")
 	}
 	if err := f.Parse(args); err != nil {
 		return err
@@ -78,6 +86,21 @@ func run() error {
 	}
 	switch command {
 	case "credentials":
+		if blob {
+			info, err := loadAccessInfo(c)
+			if err != nil {
+				return err
+			}
+			s, err := accessBlob(info, publicURL)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Contains the API token; do not publish.\n%s\n", s)
+			return nil
+		}
+		if publicURL != "" {
+			return fmt.Errorf("-public-url requires -blob")
+		}
 		pin, err := node.Fingerprint(c)
 		if err != nil {
 			return err
@@ -109,13 +132,19 @@ func run() error {
 		}
 		fmt.Printf("Config valid; platform=%s/%s; inspect cgroup memory and NAT mappings before starting\n", runtime.GOOS, runtime.GOARCH)
 		return nil
+	case "enroll":
+		info, err := loadAccessInfo(c)
+		if err != nil {
+			return err
+		}
+		return enroll(enrollClient(), enrollURL, enrollCode, info, os.Stdout)
 	case "status":
 		return status(c)
 	case "menu":
 		return runMenu(*path, c, f.Args(), os.Stdin, os.Stdout)
 	case "serve":
 	default:
-		return fmt.Errorf("commands: init, serve, check, doctor, status, menu, credentials, rotate-token, default-client, version")
+		return fmt.Errorf("commands: init, serve, check, doctor, status, menu, credentials, enroll, rotate-token, default-client, version")
 	}
 	runtime.GOMAXPROCS(1)
 	debug.SetGCPercent(50)
