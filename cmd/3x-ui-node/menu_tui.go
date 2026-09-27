@@ -32,7 +32,7 @@ var menuEntries = []menuEntry{
 	{id: "10", group: "诊断", title: "运行日志", hint: "查看最近 80 行日志"},
 	{id: "15", group: "诊断", title: "系统体检", hint: "检查节点环境、配置、服务与资源"},
 	{id: "16", group: "诊断", title: "体检与修复", hint: "逐项确认权限修复，记录原权限并复查", interactive: true},
-	{id: "6", group: "配置", title: "连接凭据", hint: "查看节点 Token 与证书指纹"},
+	{id: "6", group: "配置", title: "连接凭据", hint: "查看管理状态与证书指纹"},
 	{id: "11", group: "配置", title: "默认客户端", hint: "查看默认客户端配置"},
 	{id: "12", group: "配置", title: "设置默认客户端", hint: "保存默认客户端，重启后生效", interactive: true},
 	{id: "13", group: "配置", title: "添加客户端", hint: "交互填写客户端并确认添加", interactive: true},

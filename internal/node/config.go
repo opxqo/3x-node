@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,7 @@ type Config struct {
 	Listen             string `json:"listen"`
 	BasePath           string `json:"basePath"`
 	Token              string `json:"token"`
+	ManagedANURL       string `json:"managedANURL,omitempty"`
 	CertFile           string `json:"certFile"`
 	KeyFile            string `json:"keyFile"`
 	StateFile          string `json:"stateFile"`
@@ -48,6 +50,12 @@ func LoadConfig(path string) (Config, error) {
 	}
 	if len(c.Token) < 32 {
 		return c, errors.New("token must contain at least 32 characters")
+	}
+	if c.ManagedANURL != "" {
+		u, err := url.Parse(c.ManagedANURL)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" {
+			return c, errors.New("managedANURL must be an HTTPS URL without credentials, query or fragment")
+		}
 	}
 	if c.BasePath == "" {
 		c.BasePath = "/"

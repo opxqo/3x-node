@@ -1,6 +1,7 @@
 package node
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -33,6 +34,44 @@ func TestManagementIgnoresLocalAndUnauthorizedRequests(t *testing.T) {
 	h.ServeHTTP(httptest.NewRecorder(), r)
 	if n.management.LastConfig != 0 {
 		t.Fatal("failed mutation reported as success")
+	}
+}
+
+func TestANManagedModeRestrictsRemoteManagement(t *testing.T) {
+	n, _ := testNode(t)
+	n.Config.ManagedANURL = "https://an.example/api/node/enroll"
+	h := n.Handler()
+	for _, tt := range []struct {
+		method, path string
+		want         int
+	}{
+		{"GET", "server/status", 200},
+		{"GET", "inbounds/list", 200},
+		{"POST", "clients/add", 200},
+		{"POST", "clients/update/test", 200},
+		{"POST", "clients/test/detach", 200},
+		{"POST", "clients/del/test", 200},
+		{"POST", "inbounds/add", 200},
+		{"POST", "server/restartXrayService", 403},
+		{"POST", "clients/resetTraffic/test", 403},
+		{"POST", "inbounds/resetAllTraffics", 403},
+		{"POST", "inbounds/del/1", 403},
+		{"GET", "server/getWebCertFiles", 403},
+	} {
+		r := httptest.NewRequest(tt.method, "/panel/api/"+tt.path, nil)
+		r.Header.Set("Authorization", "Bearer "+n.Config.Token)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != tt.want {
+			t.Errorf("%s %s returned HTTP %d, want %d", tt.method, tt.path, w.Code, tt.want)
+		}
+	}
+	r := httptest.NewRequest("POST", "/panel/api/server/restartXrayService", nil)
+	r.Header.Set("Authorization", "Bearer invalid")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("invalid token returned HTTP %d", w.Code)
 	}
 }
 

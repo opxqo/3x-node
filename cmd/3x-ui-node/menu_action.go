@@ -27,12 +27,7 @@ func menuAction(choice, configPath string, c node.Config, reader *bufio.Reader, 
 	case "5":
 		err = showErrors(out, c)
 	case "6":
-		pin, pinErr := node.Fingerprint(c)
-		if pinErr != nil {
-			err = pinErr
-			break
-		}
-		fmt.Fprintf(out, "\nAPI token: %s\nTLS SHA256: %s\nListen: %s\nBase path: %s\n", c.Token, pin, c.Listen, c.BasePath)
+		err = showCredentials(out, c)
 	case "7":
 		err = serviceAction("start", out)
 	case "8":
@@ -63,4 +58,17 @@ func menuAction(choice, configPath string, c node.Config, reader *bufio.Reader, 
 		return fmt.Errorf("无效选择")
 	}
 	return err
+}
+
+func showCredentials(out io.Writer, c node.Config) error {
+	pin, err := node.Fingerprint(c)
+	if err != nil {
+		return err
+	}
+	if c.ManagedANURL != "" {
+		fmt.Fprintf(out, "\n由 AN 管理：%s\nTLS SHA256: %s\nListen: %s\nBase path: %s\nToken: 已隐藏\n", c.ManagedANURL, pin, c.Listen, c.BasePath)
+		return nil
+	}
+	fmt.Fprintf(out, "\nAPI token: %s\nTLS SHA256: %s\nListen: %s\nBase path: %s\n", c.Token, pin, c.Listen, c.BasePath)
+	return nil
 }

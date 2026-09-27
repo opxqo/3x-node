@@ -37,12 +37,16 @@ func TestEnrollPostsAccessInfoWithoutPrintingToken(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
 			t.Error(err)
 		}
-		_, _ = w.Write([]byte(`{"success":true,"msg":"node #7 pending approval"}`))
+		_, _ = w.Write([]byte(`{"success":true,"msg":"node #7 pending approval","obj":{"managedMode":"an-v1"}}`))
 	}))
 	defer srv.Close()
 	var out stdbytes.Buffer
-	if err := enroll(srv.Client(), srv.URL+"/api/node/enroll", testEnrollCode, info, &out); err != nil {
+	managed, err := enroll(srv.Client(), srv.URL+"/api/node/enroll", testEnrollCode, info, &out)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if !managed {
+		t.Fatal("AN enrollment did not enable managed mode")
 	}
 	want := info
 	want.Code = testEnrollCode
@@ -57,6 +61,41 @@ func TestEnrollPostsAccessInfoWithoutPrintingToken(t *testing.T) {
 	}
 }
 
+func TestGenericEnrollmentDoesNotEnableANMode(t *testing.T) {
+	info := testAccessInfo(t)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"success":true,"obj":{"connectionId":7}}`))
+	}))
+	defer srv.Close()
+	managed, err := enroll(srv.Client(), srv.URL+"/enroll", testEnrollCode, info, &stdbytes.Buffer{})
+	if err != nil || managed {
+		t.Fatalf("generic enrollment: managed=%t, err=%v", managed, err)
+	}
+}
+
+func TestManagedCredentialsHideToken(t *testing.T) {
+	dir := t.TempDir()
+	c, err := node.InitConfig(filepath.Join(dir, "config.json"), "0.0.0.0:2053", filepath.Join(dir, "state.json"), "/usr/local/lib/3x-ui-node/xray")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.ManagedANURL = "https://an.example/api/node/enroll"
+	if err = node.SaveConfig(filepath.Join(dir, "config.json"), c); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := node.LoadConfig(filepath.Join(dir, "config.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out stdbytes.Buffer
+	if err = showCredentials(&out, loaded); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), c.Token) || !strings.Contains(out.String(), "由 AN 管理") {
+		t.Fatalf("managed credentials output: %q", out.String())
+	}
+}
+
 func TestEnrollRejectsUnsafeInputBeforeSending(t *testing.T) {
 	info := testAccessInfo(t)
 	var calls atomic.Int32
@@ -66,11 +105,12 @@ func TestEnrollRejectsUnsafeInputBeforeSending(t *testing.T) {
 	for _, tt := range []struct{ name, url, code, want string }{
 		{"plain http", "http://" + host + "/enroll", testEnrollCode, "-url must be an https URL"},
 		{"credentials in url", "https://user:pass@" + host + "/enroll", testEnrollCode, "-url must be an https URL"},
+		{"query in url", srv.URL + "/enroll?token=unsafe", testEnrollCode, "-url must be an https URL"},
 		{"short code", srv.URL + "/enroll", "short", "-code must be 16-128"},
 		{"code with slash", srv.URL + "/enroll", "enroll/code/0123456789", "-code must be 16-128"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := enroll(srv.Client(), tt.url, tt.code, info, &stdbytes.Buffer{})
+			_, err := enroll(srv.Client(), tt.url, tt.code, info, &stdbytes.Buffer{})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("err = %v, want %q", err, tt.want)
 			}
@@ -93,7 +133,7 @@ func TestEnrollDoesNotFollowRedirects(t *testing.T) {
 		http.Redirect(w, r, "/elsewhere", http.StatusTemporaryRedirect)
 	}))
 	defer srv.Close()
-	err := enroll(srv.Client(), srv.URL+"/enroll", testEnrollCode, info, &stdbytes.Buffer{})
+	_, err := enroll(srv.Client(), srv.URL+"/enroll", testEnrollCode, info, &stdbytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "307") {
 		t.Fatalf("err = %v", err)
 	}
@@ -108,7 +148,7 @@ func TestEnrollReportsMasterRejection(t *testing.T) {
 		_, _ = w.Write([]byte(`{"success":false,"msg":"code expired"}`))
 	}))
 	defer srv.Close()
-	err := enroll(srv.Client(), srv.URL+"/enroll", testEnrollCode, info, &stdbytes.Buffer{})
+	_, err := enroll(srv.Client(), srv.URL+"/enroll", testEnrollCode, info, &stdbytes.Buffer{})
 	if err == nil || err.Error() != "enroll rejected: code expired" {
 		t.Fatalf("err = %v", err)
 	}

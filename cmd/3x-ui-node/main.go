@@ -86,6 +86,9 @@ func run() error {
 	}
 	switch command {
 	case "credentials":
+		if c.ManagedANURL != "" && blob {
+			return fmt.Errorf("AN-managed node does not export an access blob")
+		}
 		if blob {
 			info, err := loadAccessInfo(c)
 			if err != nil {
@@ -101,18 +104,17 @@ func run() error {
 		if publicURL != "" {
 			return fmt.Errorf("-public-url requires -blob")
 		}
-		pin, err := node.Fingerprint(c)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("API token: %s\nTLS SHA256: %s\nListen: %s\nBase path: %s\n", c.Token, pin, c.Listen, c.BasePath)
-		return nil
+		return showCredentials(os.Stdout, c)
 	case "rotate-token":
 		c.Token = node.RandomHex(32)
 		if err = node.SaveConfig(*path, c); err != nil {
 			return err
 		}
-		fmt.Println("Token rotated. Restart 3x-ui-node, then update the master using credentials.")
+		if c.ManagedANURL != "" {
+			fmt.Println("Token rotated. Update the AN connection with the new token in config.json, then restart 3x-ui-node. The node will be unavailable to AN until both sides match.")
+		} else {
+			fmt.Println("Token rotated. Restart 3x-ui-node, then update the master using credentials.")
+		}
 		return nil
 	case "default-client":
 		return defaultClient(*path, c, f.Args(), os.Stdout)
@@ -133,11 +135,28 @@ func run() error {
 		fmt.Printf("Config valid; platform=%s/%s; inspect cgroup memory and NAT mappings before starting\n", runtime.GOOS, runtime.GOARCH)
 		return nil
 	case "enroll":
+		if c.ManagedANURL != "" {
+			return fmt.Errorf("node is already managed by AN; recovery requires a local administrator to clear managedANURL and restart before re-enrollment")
+		}
 		info, err := loadAccessInfo(c)
 		if err != nil {
 			return err
 		}
-		return enroll(enrollClient(), enrollURL, enrollCode, info, os.Stdout)
+		managed, err := enroll(enrollClient(), enrollURL, enrollCode, info, os.Stdout)
+		if err != nil {
+			return err
+		}
+		if !managed {
+			return nil
+		}
+		c.ManagedANURL = enrollURL
+		if err = node.SaveConfig(*path, c); err != nil {
+			return fmt.Errorf("AN registered the node but local managed mode could not be saved: %w", err)
+		}
+		if err = serviceAction("restart", os.Stdout); err != nil {
+			return fmt.Errorf("AN-managed mode saved but service restart failed; run rc-service 3x-ui-node restart: %w", err)
+		}
+		return nil
 	case "status":
 		return status(c)
 	case "menu":

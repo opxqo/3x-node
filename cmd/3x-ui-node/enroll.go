@@ -52,8 +52,8 @@ func loadAccessInfo(c node.Config) (accessInfo, error) {
 
 func requireHTTPSURL(raw, name string) error {
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
-		return fmt.Errorf("%s must be an https URL without credentials or fragment", name)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" {
+		return fmt.Errorf("%s must be an https URL without credentials, query or fragment", name)
 	}
 	return nil
 }
@@ -76,25 +76,25 @@ func enrollClient() *http.Client {
 	return &http.Client{Timeout: 15 * time.Second}
 }
 
-// enroll posts this node's access details to the master once; the node keeps
-// no master URL or credential, so a failed call is retried by hand.
-func enroll(client *http.Client, endpoint, code string, info accessInfo, out io.Writer) error {
+// enroll posts this node's access details once. Only an explicit AN response
+// marker asks the CLI to persist the management binding.
+func enroll(client *http.Client, endpoint, code string, info accessInfo, out io.Writer) (bool, error) {
 	if err := requireHTTPSURL(endpoint, "-url"); err != nil {
-		return err
+		return false, err
 	}
 	if !enrollCodePattern.MatchString(code) {
-		return errors.New("-code must be 16-128 characters of A-Z, a-z, 0-9, _ or -")
+		return false, errors.New("-code must be 16-128 characters of A-Z, a-z, 0-9, _ or -")
 	}
 	info.Code = code
 	body, err := json.Marshal(info)
 	if err != nil {
-		return err
+		return false, err
 	}
 	noRedirect := *client
 	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	resp, err := noRedirect.Post(endpoint, "application/json", stdbytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("enroll request failed: %w", err)
+		return false, fmt.Errorf("enroll request failed: %w", err)
 	}
 	defer resp.Body.Close()
 	var reply node.Envelope
@@ -104,8 +104,9 @@ func enroll(client *http.Client, endpoint, code string, info accessInfo, out io.
 		if msg == "" {
 			msg = resp.Status
 		}
-		return fmt.Errorf("enroll rejected: %s", msg)
+		return false, fmt.Errorf("enroll rejected: %s", msg)
 	}
 	fmt.Fprintln(out, "Enrolled with the master.", reply.Msg)
-	return nil
+	obj, _ := reply.Obj.(map[string]any)
+	return obj["managedMode"] == "an-v1", nil
 }

@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +24,26 @@ type Envelope struct {
 	Success bool   `json:"success"`
 	Msg     string `json:"msg"`
 	Obj     any    `json:"obj"`
+}
+
+// AN-managed nodes expose only the remote operations used by the AN integration.
+// Local maintenance commands remain available to the machine owner.
+var anManagedRoutes = []struct {
+	method string
+	path   *regexp.Regexp
+}{
+	{"GET", regexp.MustCompile(`^(server/status|inbounds/list)$`)},
+	{"POST", regexp.MustCompile(`^inbounds/add$`)},
+	{"POST", regexp.MustCompile(`^clients/(add|update/[^/]+|[^/]+/detach|del/[^/]+)$`)},
+}
+
+func allowedANManagedRoute(method, path string) bool {
+	for _, route := range anManagedRoutes {
+		if route.method == method && route.path.MatchString(path) {
+			return true
+		}
+	}
+	return false
 }
 
 func reply(w http.ResponseWriter, code int, obj any, err error) {
@@ -168,6 +189,13 @@ func (n *Node) Handler() http.Handler {
 		if !ok || subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
 			reply(w, 401, nil, errors.New("unauthorized"))
 			return
+		}
+		if n.Config.ManagedANURL != "" {
+			path, matched := strings.CutPrefix(r.URL.EscapedPath(), prefix)
+			if !matched || !allowedANManagedRoute(r.Method, path) {
+				reply(w, 403, nil, errors.New("endpoint unavailable in AN-managed mode"))
+				return
+			}
 		}
 		select {
 		case sem <- struct{}{}:
