@@ -32,7 +32,7 @@ var anManagedRoutes = []struct {
 	method string
 	path   *regexp.Regexp
 }{
-	{"GET", regexp.MustCompile(`^(server/status|inbounds/list)$`)},
+	{"GET", regexp.MustCompile(`^(server/status|server/networkTopology|inbounds/list)$`)},
 	{"POST", regexp.MustCompile(`^inbounds/add$`)},
 	{"POST", regexp.MustCompile(`^clients/(add|update/[^/]+|[^/]+/detach|del/[^/]+)$`)},
 }
@@ -61,12 +61,16 @@ func (n *Node) Handler() http.Handler {
 	prefix := n.Config.BasePath + "panel/api/"
 	add := func(method, path string, fn func(*http.Request) (any, error)) {
 		mux.HandleFunc(method+" "+prefix+path, func(w http.ResponseWriter, r *http.Request) {
+			if path == "server/networkTopology" {
+				w.Header().Set("Cache-Control", "no-store")
+			}
 			obj, err := fn(r)
 			n.recordManagement(r, path, err == nil)
 			reply(w, 200, obj, err)
 		})
 	}
 	add("GET", "server/status", func(_ *http.Request) (any, error) { return n.Status(), nil })
+	add("GET", "server/networkTopology", func(_ *http.Request) (any, error) { return n.NetworkTopology(), nil })
 	add("GET", "inbounds/list", func(_ *http.Request) (any, error) { return n.Inbounds(), nil })
 	for _, path := range []string{"hosts/list", "server/descendants", "server/clientIps"} {
 		add("GET", path, func(_ *http.Request) (any, error) { return []any{}, nil })
