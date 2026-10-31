@@ -9,7 +9,11 @@ export function Logo({ className }: { className?: string }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-light.png" alt="3x-node" className={cn('w-auto dark:hidden', className)} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-dark.png" alt="3x-node" className={cn('hidden w-auto dark:block', className)} />
+      <img
+        src="/logo-dark.png"
+        alt="3x-node"
+        className={cn('hidden w-auto dark:block', className)}
+      />
     </>
   );
 }

@@ -28,19 +28,19 @@
 
 以下路径相对仓库根目录，开始开发时检查 HEAD 和相关接口是否变化：
 
-| 位置 | 当前职责及改动用途 |
-| --- | --- |
-| `internal/node/config.go` | Config、配置校验、原子保存；添加同步配置 |
-| `internal/node/types.go` | Inbound/Client/State、校验、SyncClients、容量限制；新增所有权元数据 |
-| `internal/node/node.go` | transaction、PutInbound、ChangeClient、采样和运行循环；批量同步及写入冲突处理 |
-| `internal/node/store.go` | State schema、原子写入、previous 快照；兼容迁移与恢复 |
-| `internal/node/http.go` | 副面板 HTTP 接口；新增仅本机可用的管理接口 |
-| `internal/node/core.go` | Engine.Apply、客户端热更新、配置生成和重启；第二阶段扩展完整运行配置 |
-| `cmd/3x-ui-node/main.go` | 命令分发、服务启动和退出 |
-| `cmd/3x-ui-node/menu.go` | 交互提示、本地 API 调用、菜单编号 |
-| `internal/node/master_contract_test.go` | 未修改主面板的接口契约测试 |
-| `docs/node/README.md`、`VALIDATION.md` | 使用说明及真实验收记录 |
-| `scripts/node/` | 现有安装、打包、实验脚本，发布阶段再改 |
+| 位置                                    | 当前职责及改动用途                                                            |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `internal/node/config.go`               | Config、配置校验、原子保存；添加同步配置                                      |
+| `internal/node/types.go`                | Inbound/Client/State、校验、SyncClients、容量限制；新增所有权元数据           |
+| `internal/node/node.go`                 | transaction、PutInbound、ChangeClient、采样和运行循环；批量同步及写入冲突处理 |
+| `internal/node/store.go`                | State schema、原子写入、previous 快照；兼容迁移与恢复                         |
+| `internal/node/http.go`                 | 副面板 HTTP 接口；新增仅本机可用的管理接口                                    |
+| `internal/node/core.go`                 | Engine.Apply、客户端热更新、配置生成和重启；第二阶段扩展完整运行配置          |
+| `cmd/3x-ui-node/main.go`                | 命令分发、服务启动和退出                                                      |
+| `cmd/3x-ui-node/menu.go`                | 交互提示、本地 API 调用、菜单编号                                             |
+| `internal/node/master_contract_test.go` | 未修改主面板的接口契约测试                                                    |
+| `docs/node/README.md`、`VALIDATION.md`  | 使用说明及真实验收记录                                                        |
+| `scripts/node/`                         | 现有安装、打包、实验脚本，发布阶段再改                                        |
 
 主面板文件只读参考：`internal/web/controller/api.go` 的 Token allowlist，`controller/inbound.go` 的 list handler，`service/inbound.go` 的 GetInbounds，及其客户端丰富逻辑。
 
@@ -95,16 +95,16 @@
 
 ### 4.3 字段同步与身份冲突
 
-| 字段 | 首版行为 |
-| --- | --- |
-| id / email / enable | 必须有效；照主配置同步，UUID 不能自动生成替代 |
-| flow | 空或 Vision；检查本地 REALITY/DisableFlow，不兼容报错 |
-| totalGB | 已有模型中的字节配额，禁止再乘 GB；缺失按 0 处理仅限已确认契约 |
-| expiryTime | 毫秒；负值首次使用语义须沿用并测试现有激活流程，已激活客户端不能每次拉取重新归零或延期 |
-| subId / comment 等 | 只保留现有校验允许的必要元数据，缺失可选字段不清掉无关本地字段 |
-| trafficReset / trafficResetDay | 按现有支持范围；非 never 的自动重置报不支持 |
-| IP/HWID/设备限制等 | 非零或启用时明确报不支持，禁止静默剥掉访问限制 |
-| up/down/lastOnline/clientStats | 不作为本地累计计数覆盖来源；沿用已有流量统计和 Globals 通道 |
+| 字段                           | 首版行为                                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| id / email / enable            | 必须有效；照主配置同步，UUID 不能自动生成替代                                          |
+| flow                           | 空或 Vision；检查本地 REALITY/DisableFlow，不兼容报错                                  |
+| totalGB                        | 已有模型中的字节配额，禁止再乘 GB；缺失按 0 处理仅限已确认契约                         |
+| expiryTime                     | 毫秒；负值首次使用语义须沿用并测试现有激活流程，已激活客户端不能每次拉取重新归零或延期 |
+| subId / comment 等             | 只保留现有校验允许的必要元数据，缺失可选字段不清掉无关本地字段                         |
+| trafficReset / trafficResetDay | 按现有支持范围；非 never 的自动重置报不支持                                            |
+| IP/HWID/设备限制等             | 非零或启用时明确报不支持，禁止静默剥掉访问限制                                         |
+| up/down/lastOnline/clientStats | 不作为本地累计计数覆盖来源；沿用已有流量统计和 Globals 通道                            |
 
 首次只接受同 UUID+email 的无冲突匹配；同 email 不同 UUID、同 UUID 不同 email、跨非托管入站共享 email 的不兼容变化，都返回冲突详情并保留现状。
 
@@ -153,15 +153,15 @@
 
 每个任务建议一个小提交，前一任务验收后再进入下一任务。文件名为建议，避免建立通用框架。
 
-| 任务 | 依赖 | 范围 | 交付与验收 |
-| --- | --- | --- | --- |
-| A0 验证源数据契约 | 无 | master_contract_test 及测试 fixture | 绑定客户端真实出现在读取响应；主生产代码零修改 |
-| A1 安全连接与只读预览 | A0 | config、master_reader、新 sync CLI 最小入口 | 用户能配置、连接、查看目标客户端数量；无本地客户端写入；证书/Token/响应限制测试 |
-| A2 批量同步与所有权 | A1 | types、store、sync_diff、node | 显式一次同步可让新 UUID 通；同 email/多入站冲突、计数保留、持久化、推送并发均覆盖 |
-| A3 自动轮询 | A2 | 新 sync_worker、main 生命周期 | 新增/停用在一个正常周期内同步；离线保留、退避、取消、无重入 |
-| A4 完成交互菜单 | A3 | menu、sync 本地 API、CLI | 15–20 可用；无回显输入、EOF/取消/错误 ID 不写配置；远程请求不可调用本地配置接口 |
-| A5 升级恢复与真实验收 | A4 | 测试、README、VALIDATION、必要安装脚本调整 | 旧版本无同步配置可升级；schema/回滚明确；真实主副面板+Clash 全链路与资源验收 |
-| A6 发布候选 | A5 | 发布说明/包/摘要 | 待用户要求发布时执行；附真实测试结果、限制和升级步骤 |
+| 任务                  | 依赖 | 范围                                        | 交付与验收                                                                        |
+| --------------------- | ---- | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| A0 验证源数据契约     | 无   | master_contract_test 及测试 fixture         | 绑定客户端真实出现在读取响应；主生产代码零修改                                    |
+| A1 安全连接与只读预览 | A0   | config、master_reader、新 sync CLI 最小入口 | 用户能配置、连接、查看目标客户端数量；无本地客户端写入；证书/Token/响应限制测试   |
+| A2 批量同步与所有权   | A1   | types、store、sync_diff、node               | 显式一次同步可让新 UUID 通；同 email/多入站冲突、计数保留、持久化、推送并发均覆盖 |
+| A3 自动轮询           | A2   | 新 sync_worker、main 生命周期               | 新增/停用在一个正常周期内同步；离线保留、退避、取消、无重入                       |
+| A4 完成交互菜单       | A3   | menu、sync 本地 API、CLI                    | 15–20 可用；无回显输入、EOF/取消/错误 ID 不写配置；远程请求不可调用本地配置接口   |
+| A5 升级恢复与真实验收 | A4   | 测试、README、VALIDATION、必要安装脚本调整  | 旧版本无同步配置可升级；schema/回滚明确；真实主副面板+Clash 全链路与资源验收      |
+| A6 发布候选           | A5   | 发布说明/包/摘要                            | 待用户要求发布时执行；附真实测试结果、限制和升级步骤                              |
 
 状态迁移建议：扩展可选字段并保留 schema=1 时必须验证旧读取器不会静默丢所有权后误操作。发布降级流程要求先禁用同步并导出兼容快照；若无法保证，升级 schema 并明确阻止旧版本读取。不能只回退二进制。
 
@@ -225,12 +225,12 @@ NODE_XRAY_TEST_BINARY=/absolute/path/to/pinned/xray go test -v ./internal/node
 
 ### 7.4 第二阶段任务
 
-| 任务 | 依赖 | 完整交付 |
-| --- | --- | --- |
-| B1 出站模型到真实代理出口 | A5 | RuntimeConfig 迁移、持久化、菜单 21/22、direct/block/SOCKS5、配置验证和确认应用；真实出口验证 |
-| B2 规则到真实流量分流 | B1 | 路由模型、匹配次序、引用校验、菜单 23/24、保留 API 规则；受控域名/IP/端口分流测试 |
-| B3 出站诊断 | B1，可在 B2 后做 | 菜单 25 的真实单次测试，超时清理、不泄露凭据、不改变持久路由 |
-| B4 资源/升级回归与发布候选 | B2+B3 | 新旧配置兼容、客户端同步与路由共存、回滚、128 MiB 资源测量 |
+| 任务                       | 依赖             | 完整交付                                                                                      |
+| -------------------------- | ---------------- | --------------------------------------------------------------------------------------------- |
+| B1 出站模型到真实代理出口  | A5               | RuntimeConfig 迁移、持久化、菜单 21/22、direct/block/SOCKS5、配置验证和确认应用；真实出口验证 |
+| B2 规则到真实流量分流      | B1               | 路由模型、匹配次序、引用校验、菜单 23/24、保留 API 规则；受控域名/IP/端口分流测试             |
+| B3 出站诊断                | B1，可在 B2 后做 | 菜单 25 的真实单次测试，超时清理、不泄露凭据、不改变持久路由                                  |
+| B4 资源/升级回归与发布候选 | B2+B3            | 新旧配置兼容、客户端同步与路由共存、回滚、128 MiB 资源测量                                    |
 
 第三阶段只保留研究路线：按需 Geo 数据、规则集更新及校验、DNS 策略、应用协议嗅探、可视化。每项先给磁盘/内存预算与失败恢复方案，再决定是否纳入，不能根据一次剩余磁盘快照默认全部实现。
 

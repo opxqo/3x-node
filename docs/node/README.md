@@ -105,15 +105,15 @@ sh /root/install-node.sh install --enroll-url https://主面板/注册地址 --e
 
 注册请求为 `POST <url>`，`Content-Type: application/json`：
 
-| 字段 | 说明 |
-| --- | --- |
-| `code` | 一次性注册码，16–128 位 `A-Z a-z 0-9 _ -`，节点不保存 |
-| `token` | 节点管理 API 的 Bearer Token |
-| `certSha256` | 管理 API 证书 SHA256（Base64，与 `credentials` 相同） |
-| `listenPort` | 容器内管理端口；公网映射端口由主面板在生成注册码时记录 |
-| `basePath` | 管理 API 路径前缀，默认 `/` |
-| `version` / `xrayVersion` | 节点版本与 Xray 版本 |
-| `guid` | 节点状态文件中的实例标识 |
+| 字段                      | 说明                                                   |
+| ------------------------- | ------------------------------------------------------ |
+| `code`                    | 一次性注册码，16–128 位 `A-Z a-z 0-9 _ -`，节点不保存  |
+| `token`                   | 节点管理 API 的 Bearer Token                           |
+| `certSha256`              | 管理 API 证书 SHA256（Base64，与 `credentials` 相同）  |
+| `listenPort`              | 容器内管理端口；公网映射端口由主面板在生成注册码时记录 |
+| `basePath`                | 管理 API 路径前缀，默认 `/`                            |
+| `version` / `xrayVersion` | 节点版本与 Xray 版本                                   |
+| `guid`                    | 节点状态文件中的实例标识                               |
 
 响应沿用节点 API 的 `{"success":bool,"msg":string,"obj":any}`；非 2xx 或 `success=false` 视为失败并显示 `msg`。
 
