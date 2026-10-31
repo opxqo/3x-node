@@ -106,3 +106,10 @@ Linux安装包初次构建约17MiB（arm64）/19MiB（amd64）；arm64两二进�
 
 完整主面板资源基线、主面板UI到订阅真实连接、吞吐上限和真VPS故障注入尚未实施；
 已有接口契约测试与一分钟负载测试不能替代这些项目。
+
+## 0.1.27：服务由 supervise-daemon 守护（2026-11-01）
+
+OpenRC 服务改用 `supervisor=supervise-daemon`（`respawn_delay=5`、不限次数），节点进程意外退出后自动拉起；
+`GOMAXPROCS=1 GOGC=50 GOMEMLIMIT=16MiB` 改由 `supervise_daemon_args --env` 传入。Xray 子进程的自恢复不变。
+node-a（Alpine arm64 Podman）实测：`kill -9` 节点进程后约 1 秒重新拉起，Xray 随之恢复，11 个账号与内存限制保留；
+在运行中的旧服务上替换脚本后 `rc-service 3x-ui-node restart` 正常停止与启动。

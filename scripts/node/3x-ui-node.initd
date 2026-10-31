@@ -3,12 +3,14 @@ name="3x-ui-node"
 description="Headless VLESS TCP leaf node"
 command="/usr/local/lib/3x-ui-node/current/3x-ui-node"
 command_args="serve -config /etc/3x-ui-node/config.json"
-command_background=true
+supervisor=supervise-daemon
+respawn_delay=5
+respawn_max=0
+supervise_daemon_args="--env GOMAXPROCS=1 --env GOGC=50 --env GOMEMLIMIT=16MiB"
 pidfile="/run/3x-ui-node.pid"
 retry="TERM/30/KILL/5"
 depend() { need net; after firewall; }
 start_pre() {
     checkpath -d -m 0700 /var/lib/3x-ui-node
-    "$command" check -config /etc/3x-ui-node/config.json || return 1
-    export GOMAXPROCS=1 GOGC=50 GOMEMLIMIT=16MiB
+    "$command" check -config /etc/3x-ui-node/config.json
 }
