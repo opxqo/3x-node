@@ -28,6 +28,7 @@
 - macOS arm64 / Go1.27.1：10 项状态、计数、配额、清零、损坏状态、API 与输入限制测试通过。
 - Xray26.7.28：真实普通 VLESS/TCP 与 REALITY/Vision 请求；REALITY 测试还覆盖持续请求中的其他账号热增删、PID不变、无效结构回退后再次请求成功。
 - 上述真实连接测试启用 Go race detector，通过。
+- Xray26.7.28：VLESS + XHTTP 四种模式（auto、packet-up、stream-up、stream-one）× REALITY/无加密，共 8 组真实请求通过（Alpine3.24 arm64 容器）；含热增账号 PID 不变与逐账号计数；容器内为 CGO_ENABLED=0 构建，未启用 race detector。存储 Vision flow 的账号若原样下发到 XHTTP 入站，8 组均被 Xray 拒绝，故节点对 XHTTP 入站置空 flow。
 - 节点生产依赖图不包含 Xray服务注册、完整面板、Gin、GORM、gVisor或Amnezia。
 - 原主面板 `Remote` 客户端（未修改）对精简节点：HTTPS指纹固定、入站与账号CRUD、排序、快照、清零、跨节点推送、空结果接口及拒绝完整更新，通过。
 - Alpine3.24、128MiB容器、真实OpenRC（Docker `--init`负责回收子进程）：全新安装、服务启动、升级后启动和GUID不变，通过。不是Incus真机验收。

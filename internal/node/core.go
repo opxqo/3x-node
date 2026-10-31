@@ -285,6 +285,13 @@ func (c *Core) xrayConfig(in []LiveInbound) map[string]any {
 		var stream map[string]json.RawMessage
 		_ = json.Unmarshal(ib.Stream, &stream)
 		delete(stream, "externalProxy")
+		var xhttp map[string]json.RawMessage
+		if json.Unmarshal(stream["xhttpSettings"], &xhttp) == nil && xhttp != nil {
+			for _, k := range xhttpClientOnly {
+				delete(xhttp, k)
+			}
+			stream["xhttpSettings"], _ = json.Marshal(xhttp)
+		}
 		inbounds = append(inbounds, map[string]any{"tag": ib.Tag, "listen": ib.Listen, "port": ib.Port, "protocol": "vless", "settings": map[string]any{"clients": users, "decryption": "none"}, "streamSettings": stream, "sniffing": map[string]any{"enabled": false}})
 	}
 	return map[string]any{

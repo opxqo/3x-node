@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -60,12 +61,17 @@ func (n *Node) desired(s *State) []LiveInbound {
 			continue
 		}
 		live := LiveInbound{Tag: ib.Tag, Listen: ib.Listen, Port: ib.Port, Stream: ib.StreamSettings, Users: map[string]Account{}}
+		var stream struct {
+			Network string `json:"network"`
+		}
+		_ = json.Unmarshal(ib.StreamSettings, &stream)
 		cs, _ := ib.Clients()
 		for _, c := range cs {
 			t := s.Traffic[c.Text("email")]
 			if t != nil && c.Enabled() && !s.Exhausted(t, now) {
 				flow := c.Text("flow")
-				if ib.DisableFlow {
+				// Vision rides raw TCP only; an XHTTP account keeping it rejects the empty-flow clients XHTTP needs.
+				if ib.DisableFlow || stream.Network == "xhttp" {
 					flow = ""
 				}
 				live.Users[c.Text("email")] = Account{ID: c.Text("id"), Flow: flow}

@@ -158,6 +158,11 @@ func inboundDetail(in node.Inbound) []string {
 		Security        string          `json:"security"`
 		RealitySettings json.RawMessage `json:"realitySettings"`
 		TLSSettings     json.RawMessage `json:"tlsSettings"`
+		XHTTPSettings   struct {
+			Path string `json:"path"`
+			Mode string `json:"mode"`
+			Host string `json:"host"`
+		} `json:"xhttpSettings"`
 	}
 	_ = json.Unmarshal(in.StreamSettings, &stream)
 	if stream.Network == "" {
@@ -190,6 +195,10 @@ func inboundDetail(in node.Inbound) []string {
 		"传输",
 		inboundField("网络", stream.Network),
 		inboundField("安全", stream.Security),
+	}
+	if stream.Network == "xhttp" {
+		x := stream.XHTTPSettings
+		lines = append(lines, inboundField("路径", valueOrDash(x.Path)), inboundField("模式", valueOrDash(x.Mode)), inboundField("Host", valueOrDash(x.Host)))
 	}
 	switch stream.Security {
 	case "reality":

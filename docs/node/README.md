@@ -6,7 +6,7 @@
 
 ## 功能范围
 
-仅 VLESS + TCP/RAW，安全层支持无加密（`none`）或 REALITY（可选 Vision），直连出口。主面板 VLESS 入站携带的 Vision `testseed` 元数据会校验后保留在节点状态，节点服务端使用 Xray 默认参数；VLESS fallback 仍不支持。
+仅 VLESS + TCP/RAW 或 XHTTP，安全层支持无加密（`none`）或 REALITY，直连出口。Vision 仅用于 TCP/RAW；XHTTP 入站保留客户端存储的 flow，但生成 Xray 配置时置空，客户端须以空 flow 连接。XHTTP 接受完整面板的入站字段，模式为 `auto`、`packet-up`、`stream-up`、`stream-one`；`xmux` 等仅客户端使用的字段保留在状态里，不写入 Xray。主面板 VLESS 入站携带的 Vision `testseed` 元数据会校验后保留在节点状态，节点服务端使用 Xray 默认参数；VLESS fallback 仍不支持。
 保留入站/账号 CRUD、分享元数据、流量、配额、固定到期、首次使用计时、清零。
 用户修改走复用的本机 gRPC；监听结构变化串行重启 Xray。
 不支持其他协议、订阅服务、自动续期、IP/设备限制、嗅探、区域规则、通知及完整面板更新。

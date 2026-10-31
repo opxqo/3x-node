@@ -20,8 +20,8 @@
 | --- | --- | --- |
 | 用途 | 网页管理、订阅与多节点管理 | 接收主面板下发并运行代理服务 |
 | 管理方式 | 网页、API、`x-ui` 菜单 | API、命令与菜单，无网页 |
-| 协议范围 | VLESS、VMess、Trojan、Shadowsocks 等多协议 | 仅 VLESS + TCP/RAW |
-| 安全层 | 按具体协议和传输配置 | 无加密或 REALITY，可选 Vision |
+| 协议范围 | VLESS、VMess、Trojan、Shadowsocks 等多协议 | 仅 VLESS + TCP/RAW 或 XHTTP |
+| 安全层 | 按具体协议和传输配置 | 无加密或 REALITY；Vision 仅限 TCP/RAW |
 | 数据存储 | SQLite 或 PostgreSQL | 本地配置与状态文件 |
 | 安装环境 | 多种 Linux 发行版，另有 Docker 部署 | Alpine + OpenRC，amd64 / arm64 |
 | 安装脚本 | `install.sh` | `install-node.sh` |
@@ -96,7 +96,7 @@ apk add --no-cache ca-certificates curl && curl -fLSs https://raw.githubusercont
 
 ### 精简副节点
 
-- 支持 VLESS + TCP/RAW，无加密或 REALITY，可选 Vision，使用直连出口。
+- 支持 VLESS + TCP/RAW 或 XHTTP（四种模式），无加密或 REALITY，使用直连出口；Vision 仅用于 TCP/RAW，XHTTP 入站自动不下发 flow。
 - 保留入站与客户端增删改、分享元数据、流量统计、配额、固定到期、首次使用计时和清零。
 - 客户端修改复用本机 gRPC；监听结构变化时串行重启 Xray。
 - 接收完整面板客户端数据时，忽略其他协议的 `password`、`auth`、`secret` 字段，避免 VLESS 同步被无关字段拒绝。

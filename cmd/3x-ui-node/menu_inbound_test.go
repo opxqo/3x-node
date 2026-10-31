@@ -183,3 +183,21 @@ func TestInboundCursorRowRendersHighlighted(t *testing.T) {
 		t.Fatalf("highlighted row is not the cursor row: %q", highlighted[0])
 	}
 }
+
+func TestInboundDetailShowsXHTTPTransport(t *testing.T) {
+	in := realityInbound(t, testRealityPublic)
+	var stream map[string]any
+	if err := json.Unmarshal(in.StreamSettings, &stream); err != nil {
+		t.Fatal(err)
+	}
+	stream["network"] = "xhttp"
+	stream["xhttpSettings"] = map[string]any{"path": "/xh", "mode": "stream-one"}
+	raw, _ := json.Marshal(stream)
+	in.StreamSettings = raw
+	body := strings.Join(inboundDetail(in), "\n")
+	for _, want := range []string{"网络          xhttp", "路径          /xh", "模式          stream-one", "Host          —"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("detail is missing %q:\n%s", want, body)
+		}
+	}
+}

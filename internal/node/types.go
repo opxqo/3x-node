@@ -277,16 +277,23 @@ func ValidateInbound(i *Inbound) error {
 	var network, security string
 	_ = json.Unmarshal(stream["network"], &network)
 	_ = json.Unmarshal(stream["security"], &security)
-	if network != "tcp" && network != "raw" {
-		return errors.New("only TCP/RAW transport is supported")
+	if network != "tcp" && network != "raw" && network != "xhttp" {
+		return errors.New("only TCP/RAW or XHTTP transport is supported")
 	}
 	if security != "" && security != "none" && security != "reality" {
 		return errors.New("only none or REALITY security is supported")
 	}
 	for k, v := range stream {
-		if !slices.Contains([]string{"network", "security", "realitySettings", "tcpSettings", "rawSettings", "externalProxy"}, k) && !emptyJSON(v) {
+		if !slices.Contains([]string{"network", "security", "realitySettings", "tcpSettings", "rawSettings", "xhttpSettings", "externalProxy"}, k) && !emptyJSON(v) {
 			return fmt.Errorf("unsupported stream setting %s", k)
 		}
+	}
+	if network == "xhttp" {
+		if err := validateXHTTP(stream["xhttpSettings"]); err != nil {
+			return err
+		}
+	} else if !emptyJSON(stream["xhttpSettings"]) {
+		return errors.New("XHTTP settings require XHTTP transport")
 	}
 	for _, k := range []string{"tcpSettings", "rawSettings"} {
 		var fields map[string]json.RawMessage
@@ -350,7 +357,7 @@ func ValidateInbound(i *Inbound) error {
 		if err := validateClient(c); err != nil {
 			return err
 		}
-		if security != "reality" && c.Text("flow") != "" {
+		if security != "reality" && network != "xhttp" && c.Text("flow") != "" {
 			return errors.New("XTLS Vision flow requires REALITY security")
 		}
 		if seen[c.Text("email")] {
@@ -414,6 +421,42 @@ func validateClient(c Client) error {
 	}
 	if r := c.Text("trafficReset"); r != "" && r != "never" {
 		return errors.New("automatic client traffic reset unsupported")
+	}
+	return nil
+}
+
+// xhttpFields is the full panel's inbound XHTTP shape; client-only fields
+// round-trip for share links and are dropped before Xray (see xhttpClientOnly).
+var xhttpFields = []string{
+	"path", "host", "mode", "headers", "xPaddingBytes", "xPaddingObfsMode", "xPaddingKey", "xPaddingHeader",
+	"xPaddingPlacement", "xPaddingMethod", "sessionIDPlacement", "sessionIDKey", "sessionIDTable", "sessionIDLength",
+	"seqPlacement", "seqKey", "uplinkDataPlacement", "uplinkDataKey", "scMaxEachPostBytes", "noSSEHeader",
+	"scMaxBufferedPosts", "scStreamUpServerSecs", "serverMaxHeaderBytes", "uplinkHTTPMethod",
+	"scMinPostsIntervalMs", "uplinkChunkSize", "noGRPCHeader", "xmux", "enableXmux",
+}
+
+var xhttpClientOnly = []string{"scMinPostsIntervalMs", "uplinkChunkSize", "noGRPCHeader", "xmux", "enableXmux"}
+
+func validateXHTTP(raw []byte) error {
+	var fields map[string]json.RawMessage
+	if !emptyJSON(raw) {
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			return errors.New("XHTTP settings must be an object")
+		}
+	}
+	for name, value := range fields {
+		if !slices.Contains(xhttpFields, name) && !emptyJSON(value) {
+			return fmt.Errorf("unsupported XHTTP setting %s", name)
+		}
+	}
+	var path, mode string
+	_ = json.Unmarshal(fields["path"], &path)
+	_ = json.Unmarshal(fields["mode"], &mode)
+	if path != "" && !strings.HasPrefix(path, "/") {
+		return errors.New("XHTTP path must start with /")
+	}
+	if !slices.Contains([]string{"", "auto", "packet-up", "stream-up", "stream-one"}, mode) {
+		return errors.New("XHTTP mode must be auto, packet-up, stream-up or stream-one")
 	}
 	return nil
 }
