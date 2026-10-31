@@ -476,3 +476,33 @@ func TestFullMasterRemoteRouteCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestBulkResetClientTrafficsSkipsUnknownEmails(t *testing.T) {
+	n, e := testNode(t)
+	e.values["user>>>alice>>>traffic>>>uplink"] = 100
+	if err := n.sampleLocked(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := n.PushGlobals("master", []Traffic{{Email: "alice", Up: 10000}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := n.transaction(func(s *State) (any, error) {
+		s.Traffic["alice"].Enable = false
+		n.setClientField(s, "alice", "enable", false)
+		return nil, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := n.ResetClientTraffics([]string{"ghost", "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, map[string]int{"affected": 1}) {
+		t.Fatalf("result %+v", got)
+	}
+	tr := n.state.Traffic["alice"]
+	cs, _ := n.state.Inbounds[0].Clients()
+	if tr.Up != 0 || !tr.Enable || !cs[0].Enabled() || len(n.state.Globals["master"]) != 0 {
+		t.Fatalf("alice not reset: traffic %+v client %s globals %+v", tr, cs[0]["enable"], n.state.Globals)
+	}
+}

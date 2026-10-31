@@ -167,6 +167,15 @@ func (n *Node) Handler() http.Handler {
 		return n.ChangeClient(r.PathValue("email"), nil, b.IDs, "detach")
 	})
 	add("POST", "clients/resetTraffic/{email}", func(r *http.Request) (any, error) { return n.ResetTraffic(r.PathValue("email"), 0) })
+	add("POST", "clients/bulkResetTraffic", func(r *http.Request) (any, error) {
+		var b struct {
+			Emails []string `json:"emails"`
+		}
+		if err := decode(r, &b); err != nil {
+			return nil, err
+		}
+		return n.ResetClientTraffics(b.Emails)
+	})
 	add("POST", "inbounds/resetAllTraffics", func(_ *http.Request) (any, error) { return n.ResetTraffic("", 0) })
 	add("POST", "inbounds/{id}/resetTraffic", func(r *http.Request) (any, error) {
 		id, err := pathID(r)
@@ -312,7 +321,7 @@ func decode(r *http.Request, out any) error {
 					return err
 				}
 				obj[k] = json.RawMessage(v)
-			case "enable", "disableFlow":
+			case "enable", "disableFlow", "excludeFromSub":
 				if v != "true" && v != "false" {
 					return errors.New("invalid boolean")
 				}

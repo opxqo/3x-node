@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	Version     = "0.1.25-node"
+	Version     = "0.1.26-node"
 	XrayVersion = "26.7.28"
 	MaxBody     = 1 << 20
 	MaxInbounds = 8
@@ -81,6 +81,7 @@ type Inbound struct {
 	ShareAddrStrategy string    `json:"shareAddrStrategy"`
 	ShareAddr         string    `json:"shareAddr"`
 	DisableFlow       bool      `json:"disableFlow"`
+	ExcludeFromSub    bool      `json:"excludeFromSub"`
 	ClientStats       []Traffic `json:"clientStats,omitempty"`
 }
 
@@ -118,6 +119,7 @@ func (i *Inbound) SetClients(cs []Client) {
 type Traffic struct {
 	Reset        int    `json:"reset,omitempty"`
 	ResetDay     int    `json:"resetDay,omitempty"`
+	ResetWeekday int    `json:"resetWeekday,omitempty"`
 	ResetMax     int    `json:"resetMax,omitempty"`
 	ResetCount   int    `json:"resetCount,omitempty"`
 	LastSubFetch int64  `json:"lastSubFetch,omitempty"`

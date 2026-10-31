@@ -24,7 +24,7 @@ var panelClientMetadataFields = map[string]struct{}{
 }
 
 var panelClientUnsupportedFields = map[string]struct{}{
-	"limitIp": {}, "reset": {}, "resetDay": {}, "resetMax": {}, "hwidLimit": {},
+	"limitIp": {}, "reset": {}, "resetDay": {}, "resetWeekday": {}, "resetMax": {}, "hwidLimit": {},
 	"deviceLimit": {}, "reverse": {}, "auth": {}, "privateKey": {}, "publicKey": {},
 	"allowedIPs": {}, "allowedIPsByInbound": {}, "preSharedKey": {}, "keepAlive": {},
 	"forwardedPorts": {}, "secret": {}, "adTag": {},

@@ -521,6 +521,26 @@ func (n *Node) ResetTraffic(email string, id int) (any, error) {
 	})
 }
 
+// ResetClientTraffics is the master's bulk reset; like the full panel it skips
+// emails this node does not hold instead of failing the whole batch.
+func (n *Node) ResetClientTraffics(emails []string) (any, error) {
+	return n.transaction(func(s *State) (any, error) {
+		affected := 0
+		for _, email := range emails {
+			t := s.Traffic[email]
+			if t == nil {
+				continue
+			}
+			t.Up, t.Down = 0, 0
+			t.Enable = true
+			s.ClearGlobals(email)
+			n.setClientField(s, email, "enable", true)
+			affected++
+		}
+		return map[string]int{"affected": affected}, nil
+	})
+}
+
 func (n *Node) PushGlobals(master string, rows []Traffic) (any, error) {
 	return n.transaction(func(s *State) (any, error) {
 		if master == "" || len(master) > 128 {

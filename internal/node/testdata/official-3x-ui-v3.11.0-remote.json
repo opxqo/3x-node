@@ -1,0 +1,140 @@
+[
+  {
+    "method": "POST",
+    "path": "inbounds/add",
+    "contentType": "application/x-www-form-urlencoded",
+    "body": "disableFlow=false\u0026enable=true\u0026excludeFromSub=false\u0026expiryTime=0\u0026listen=\u0026port=18443\u0026protocol=vless\u0026remark=\u0026settings=%7B%22decryption%22%3A%22none%22%2C%22encryption%22%3A%22none%22%2C%22fallbacks%22%3A%5B%5D%2C%22clients%22%3A%5B%5D%7D\u0026shareAddr=\u0026shareAddrStrategy=node\u0026sniffing=%7B%22enabled%22%3Afalse%7D\u0026streamSettings=%7B%22network%22%3A%22tcp%22%2C%22security%22%3A%22reality%22%2C%22realitySettings%22%3A%7B%22privateKey%22%3A%22test%22%2C%22target%22%3A%22example.org%3A443%22%2C%22serverNames%22%3A%5B%22example.org%22%5D%2C%22shortIds%22%3A%5B%22ab%22%5D%7D%7D\u0026subSortIndex=0\u0026tag=in-18443\u0026total=0"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/add",
+    "contentType": "application/x-www-form-urlencoded",
+    "body": "disableFlow=false\u0026enable=true\u0026excludeFromSub=false\u0026expiryTime=0\u0026listen=\u0026port=28762\u0026protocol=vless\u0026remark=\u0026settings=%7B%22decryption%22%3A%22none%22%2C%22encryption%22%3A%22none%22%2C%22fallbacks%22%3A%5B%5D%2C%22clients%22%3A%5B%5D%7D\u0026shareAddr=\u0026shareAddrStrategy=node\u0026sniffing=%7B%22enabled%22%3Afalse%7D\u0026streamSettings=%7B%22network%22%3A%22xhttp%22%2C%22security%22%3A%22reality%22%2C%22realitySettings%22%3A%7B%22privateKey%22%3A%22test%22%2C%22target%22%3A%22example.org%3A443%22%2C%22serverNames%22%3A%5B%22example.org%22%5D%2C%22shortIds%22%3A%5B%22ab%22%5D%7D%2C%22xhttpSettings%22%3A%7B%22path%22%3A%22%2Fx%22%2C%22mode%22%3A%22auto%22%7D%7D\u0026subSortIndex=0\u0026tag=in-28762\u0026total=0"
+  },
+  {
+    "method": "GET",
+    "path": "inbounds/list"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/update/1",
+    "contentType": "application/x-www-form-urlencoded",
+    "body": "disableFlow=false\u0026enable=true\u0026excludeFromSub=false\u0026expiryTime=0\u0026listen=\u0026port=18443\u0026protocol=vless\u0026remark=edited\u0026settings=%7B%22decryption%22%3A%22none%22%2C%22encryption%22%3A%22none%22%2C%22fallbacks%22%3A%5B%5D%2C%22clients%22%3A%5B%5D%7D\u0026shareAddr=\u0026shareAddrStrategy=node\u0026sniffing=%7B%22enabled%22%3Afalse%7D\u0026streamSettings=%7B%22network%22%3A%22tcp%22%2C%22security%22%3A%22reality%22%2C%22realitySettings%22%3A%7B%22privateKey%22%3A%22test%22%2C%22target%22%3A%22example.org%3A443%22%2C%22serverNames%22%3A%5B%22example.org%22%5D%2C%22shortIds%22%3A%5B%22ab%22%5D%7D%7D\u0026subSortIndex=0\u0026tag=in-18443\u0026total=0"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/1/subSortIndex",
+    "contentType": "application/x-www-form-urlencoded",
+    "body": "subSortIndex=2"
+  },
+  {
+    "method": "POST",
+    "path": "clients/add",
+    "contentType": "application/json",
+    "body": "{\"client\":{\"id\":\"00000000-0000-4000-8000-000000000001\",\"security\":\"\",\"flow\":\"xtls-rprx-vision\",\"email\":\"alice\",\"limitIp\":0,\"totalGB\":0,\"expiryTime\":0,\"enable\":true,\"tgId\":0,\"subId\":\"share-id\",\"comment\":\"\",\"reset\":0,\"resetDay\":0,\"resetWeekday\":0,\"resetMax\":0,\"trafficReset\":\"never\",\"trafficResetDay\":1},\"inboundIds\":[1]}"
+  },
+  {
+    "method": "POST",
+    "path": "clients/add",
+    "contentType": "application/json",
+    "body": "{\"client\":{\"id\":\"00000000-0000-4000-8000-000000000002\",\"security\":\"\",\"email\":\"bob\",\"limitIp\":0,\"totalGB\":0,\"expiryTime\":0,\"enable\":true,\"tgId\":0,\"subId\":\"bob-sub\",\"comment\":\"\",\"reset\":0,\"resetDay\":0,\"resetWeekday\":0,\"resetMax\":0},\"inboundIds\":[2]}"
+  },
+  {
+    "method": "POST",
+    "path": "clients/update/alice?inboundIds=1",
+    "contentType": "application/json",
+    "body": "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"security\":\"\",\"flow\":\"xtls-rprx-vision\",\"email\":\"alice\",\"limitIp\":0,\"totalGB\":0,\"expiryTime\":0,\"enable\":true,\"tgId\":0,\"subId\":\"share-id\",\"comment\":\"updated\",\"reset\":0,\"resetDay\":0,\"resetWeekday\":0,\"resetMax\":0,\"trafficReset\":\"never\",\"trafficResetDay\":1}"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/pushClientTraffics",
+    "contentType": "application/json",
+    "body": "{\"masterGuid\":\"master\",\"traffics\":[{\"id\":0,\"inboundId\":0,\"enable\":false,\"email\":\"alice\",\"uuid\":\"\",\"subId\":\"\",\"up\":1000,\"down\":0,\"expiryTime\":0,\"total\":0,\"reset\":0,\"resetDay\":0,\"resetWeekday\":0,\"resetMax\":0,\"resetCount\":0,\"lastOnline\":0,\"lastSubFetch\":0}]}"
+  },
+  {
+    "method": "GET",
+    "path": "inbounds/list"
+  },
+  {
+    "method": "POST",
+    "path": "clients/onlinesByGuid"
+  },
+  {
+    "method": "POST",
+    "path": "clients/onlines"
+  },
+  {
+    "method": "POST",
+    "path": "clients/lastOnline"
+  },
+  {
+    "method": "POST",
+    "path": "clients/activeInbounds"
+  },
+  {
+    "method": "POST",
+    "path": "clients/resetTraffic/alice"
+  },
+  {
+    "method": "POST",
+    "path": "clients/bulkResetTraffic",
+    "contentType": "application/json",
+    "body": "{\"emails\":[\"alice\",\"bob\"]}"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/1/resetTraffic"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/resetAllTraffics"
+  },
+  {
+    "method": "GET",
+    "path": "server/descendants"
+  },
+  {
+    "method": "GET",
+    "path": "hosts/list"
+  },
+  {
+    "method": "GET",
+    "path": "server/getWebCertFiles"
+  },
+  {
+    "method": "GET",
+    "path": "server/clientIps"
+  },
+  {
+    "method": "POST",
+    "path": "clients/clientIpsByGuid"
+  },
+  {
+    "method": "POST",
+    "path": "server/clientIps",
+    "contentType": "application/json",
+    "body": "null"
+  },
+  {
+    "method": "POST",
+    "path": "clients/alice/detach",
+    "contentType": "application/json",
+    "body": "{\"inboundIds\":[1]}"
+  },
+  {
+    "method": "POST",
+    "path": "clients/del/bob"
+  },
+  {
+    "method": "POST",
+    "path": "server/restartXrayService"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/del/1"
+  },
+  {
+    "method": "POST",
+    "path": "inbounds/del/2"
+  }
+]
