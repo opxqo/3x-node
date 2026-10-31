@@ -25,10 +25,10 @@ fi
 [ "$(id -u)" = 0 ] || die 'Run as root.'
 [ -f /etc/alpine-release ] && command -v rc-service >/dev/null || die 'Alpine Linux with OpenRC is required.'
 # Pin the node release: the repository also publishes full-panel releases.
-version=0.1.25
+version=0.1.26
 case "$(uname -m)" in
-    x86_64) arch=amd64; expected=4fafda3f5045d077843275c07f75d658fc3a1e90b6ae5456fd91aa2e291586bb;;
-    aarch64) arch=arm64; expected=4ea1641402871d3b58e7e309d497be4147584dc42fbea5e3507f7192515ff9a5;;
+    x86_64) arch=amd64; expected=49ba3d5e51845050ccb28624d7f08ed61efc77ff55156769bdc2369567e6ce99;;
+    aarch64) arch=arm64; expected=bc4a7d3f1030456079072bcff0fcd1d66f6d924c5057792baa125921169cf761;;
     *) die 'Only amd64 and arm64 are supported.';;
 esac
 base=/usr/local/lib/3x-ui-node

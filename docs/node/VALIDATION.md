@@ -15,6 +15,27 @@
 修正扫描范围、将临时Go工具链移出仓库，并以 `go test -p 2 ./...` 重新运行后，全部包通过。
 `go test -race -tags mastercontract ./internal/node ./cmd/3x-ui-node ./tools/nodebench ./internal/web/network` 通过。
 
+官方 3x-ui v3.11.0 已改为按 tag 解析远端ID后再发 `inbounds/{id}/resetTraffic`，上述限制只存在于旧基准，不影响 v3.11.0 主面板。
+
+## 官方 3x-ui v3.11.0 主面板契约（2026-10-31，0.1.26-node）
+
+对象：上游 MHSanaei/3x-ui `v3.11.0`（`c621ba90`）未修改的 `internal/web/runtime/remote.go`，以及 `service/node.go` 的探测与证书指纹请求。
+方法：从该标签只读导出源码，用其 `Remote` 依次调用全部节点方法（含 XHTTP + REALITY 入站），对记录用 TLS 服务录下每个请求的方法、路径、Content-Type 与正文，
+存为 `internal/node/testdata/official-3x-ui-v3.11.0-remote.json`；`TestOfficialMasterV3110RecordedWire` 带 Bearer、`X-Config-Sha256`、`X-3x-Master-Push` 原样回放到节点，要求29个请求全部 HTTP 200 且 success。
+仓库内 `-tags mastercontract` 测试使用的是本仓库较早的 runtime 副本，覆盖不到以下 v3.11.0 新增差异。
+
+| 差异 | 0.1.25 行为 | 0.1.26 处理 |
+|---|---|---|
+| 入站 add/update 表单每次都带 `excludeFromSub` | 未知字段，所有入站推送失败 | 作为布尔字段接收并保存，原样回传 |
+| `pushClientTraffics` 行带 `resetWeekday` | 未知字段，全局流量推送失败 | 接收；账号上非零 `resetWeekday` 与 `resetDay` 同样拒绝为不支持的功能 |
+| 待清零账号较多时调用 `POST clients/bulkResetTraffic {"emails":[...]}` | 404 | 单事务清零并重新启用；跳过本节点没有的账号，返回 `{"affected":n}` |
+| 请求头 `X-3x-Master-Push: 1` | 忽略 | 不变（无需处理） |
+| 响应头 `X-3x-Node-Caps` | 节点不发送 | 不变：主面板不压缩推送；内核模式 AmneziaWG 入站被主面板拒绝推送，与节点只支持 VLESS 一致 |
+
+- 状态探测 `GET server/status` 只读取 cpu/mem/xray/panelVersion/panelGuid/uptime/netIO，节点已提供；证书指纹获取不带 token，节点返回401但 TLS 握手已完成，指纹可取。
+- `subSortIndex=0`（主面板默认值）与 `trafficResetDay` 默认值均已兼容。
+- 未覆盖：真实主面板进程与节点的多轮同步（官方 `internal/nodee2e`），以及 AmneziaWG/MTProto 等节点本就不支持的协议。
+
 ## 已取消的24小时测试
 
 2026-09-06 02:26（Asia/Shanghai）启动本地隔离负载测试，后按用户要求提前停止并删除测试容器，不能作为24小时验收结果。
@@ -34,6 +55,25 @@
 - Alpine3.24、128MiB容器、真实OpenRC（Docker `--init`负责回收子进程）：全新安装、服务启动、升级后启动和GUID不变，通过。不是Incus真机验收。
 - 当前版本和一个回退版本、配置、状态合计94028KiB，约91.82MiB，小于200MiB目标（不含操作系统及临时安装包）。
 - 未带init的第一组Docker安装测试在停机时遗留僵尸进程，导致OpenRC误报无法停止；修正测试容器的PID1后停机升级通过，未修改生产服务来绕过检查。
+
+## Podman 小鸡真机：XHTTP + REALITY（2026-10-31）
+
+环境：Alpine 3.24.2 arm64（Podman），cgroup 1CPU、memory.max 256MiB、允许 256MiB swap，磁盘 3GB。
+程序为 `7911c064` 构建的测试包（版本串仍为 0.1.25-node），Xray 26.7.28；管理口与入站经服务商 NAT 端口映射访问。
+客户端为开发机 Docker 内的 Xray 26.7.28，经公网连接；带宽受开发机链路限制（约 1–2MB/s），不代表节点吞吐上限。
+
+| 项 | 结果 |
+|---|---|
+| 入站 | 28762：VLESS + XHTTP(auto) + REALITY，两个账号（alice 存储 Vision flow，bob 空 flow）；61936：VLESS + TCP + REALITY + Vision |
+| 连通 | 三个客户端出口 IP 均为节点；alice 以空 flow 走 XHTTP 成功 |
+| 单次计数 | XHTTP 下载 10MiB / 5MiB 开销 0.19% / 0.25%，上传 3MiB 开销 0.15%；TCP 下载 10MiB 开销 0.20%；未使用账号读数不变 |
+| 并发计数 | XHTTP 60 个 4MiB 下载（两账号各 30）与 TCP 60 个 4MiB 下载全部完成，各账号开销均为 0.27%；入站级与账号合计一致 |
+| 内存 | 空闲 anon 22MiB；负载期间 anon 峰值 32MiB，Xray RSS 峰值 45MiB，agent RSS 峰值 17MiB；swap 最多约 0.03MiB；OOM=0 |
+| 异常 | TCP 60 并发期间节点 1 秒超时的统计 RPC 超时一次（DeadlineExceeded），下一周期恢复，计数无丢失 |
+
+- cgroup memory.current 曾短暂触及 256MiB，随即回落到约 70–80MiB，为安装包与日志的文件缓存；判断内存余量应看 anon 与 RSS。
+- XHTTP 多路复用：60 个并发请求在节点上只对应约 6 条 TCP 连接；TCP 入站为每请求一条连接。
+- 未测：128MiB 且禁用 swap 的限制、24 小时稳定性、高吞吐上限、stream-one/packet-up 等其他模式的公网表现。
 
 ## 首轮 Linux arm64 数据（2026-09-06）
 
