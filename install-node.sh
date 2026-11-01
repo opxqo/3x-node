@@ -53,8 +53,15 @@ asset="3x-ui-node-$version-linux-$arch.tar.gz"
 package="$work/$asset"
 url="https://github.com/opxqo/3x-node/releases/download/v$version-node/$asset"
 echo "Downloading 3x-ui-node $version ($arch)..."
-curl --fail --location --show-error --retry 3 --connect-timeout 15 --max-time 600 \
-    --proto '=https' --proto-redir '=https' --output "$package" "$url"
+# Unstable routes to GitHub reset long downloads: resume instead of restarting; the checksum below still decides.
+attempt=1
+until curl --fail --location --silent --show-error --connect-timeout 15 --max-time 600 --speed-limit 1024 --speed-time 60 \
+    --continue-at - --proto '=https' --proto-redir '=https' --output "$package" "$url"; do
+    [ "$attempt" -lt 6 ] || die 'Download failed 6 times; check this server can reach github.com, then rerun.'
+    attempt=$((attempt + 1))
+    echo "Download interrupted; resuming (attempt $attempt/6)..."
+    sleep $((attempt * 2))
+done
 actual=$(sha256sum "$package" | awk '{print $1}')
 [ "$actual" = "$expected" ] || die 'Package checksum mismatch; installation aborted.'
 # Execute only after verification; the package installer validates its contents.
