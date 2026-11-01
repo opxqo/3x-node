@@ -9,6 +9,8 @@ on:
   push:
     tags:
       - "v*.*.*"
+      # Node releases ship tarballs only; the panel image is not built for them.
+      - "!v*-node"
 
 jobs:
   build:
